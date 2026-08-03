@@ -21,7 +21,7 @@ def create_app(config_name: str | None = None) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
     os.makedirs(app.instance_path, exist_ok=True)
     os.makedirs(os.path.join(app.root_path, "static", "uploads", "profile_photos"), exist_ok=True)
-    
+
     cfg_key = config_name or os.getenv("FLASK_ENV", "development")
     cfg_cls = config_by_name.get(cfg_key, config_by_name["development"])
     app.config.from_object(cfg_cls)
@@ -152,7 +152,6 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(timetable_bp)
     register_cli(app)
 
-    # ── Custom Jinja2 filters ─────────────────────────────────────────────────
     import os as _os
 
     @app.template_filter('basename')
@@ -162,8 +161,6 @@ def create_app(config_name: str | None = None) -> Flask:
 
     @app.before_request
     def enforce_localhost_access():
-        # Skip the localhost-only check entirely when running on Render (or any host
-        # that sets RENDER env var) — this restriction is for local dev safety only.
         if os.environ.get("RENDER"):
             return None
 
@@ -188,13 +185,13 @@ def create_app(config_name: str | None = None) -> Flask:
 
         if host_header.endswith(":5000") or host_header.endswith(":5001"):
             return None
-        
+
         print(f"DEBUG host_header={host_header!r} RENDER_env={os.environ.get('RENDER')!r}", flush=True)
         abort(403)
-        
-        @app.route('/healthz')
-        def health_check():
-            return 'OK', 200
-        
-        print("ROUTES:", app.url_map, flush=True)
-        return app
+
+    @app.route('/healthz')
+    def health_check():
+        return 'OK', 200
+
+    print("ROUTES:", app.url_map, flush=True)
+    return app
