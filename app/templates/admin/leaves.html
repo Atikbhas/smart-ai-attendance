@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Leave Management{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="eyebrow">Admin portal</p>
+        <h1>Leave management</h1>
+    </div>
+    <a class="btn btn-secondary" href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 g-3">
+    {% for label, value in stats.items() %}
+    <article class="card p-4">
+        <div class="text-muted mb-2">{{ label|title }}</div>
+        <strong class="count-up">{{ value }}</strong>
+    </article>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <div class="mb-3">
+        <p class="eyebrow">Records</p>
+        <h3>All student leave records</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead><tr><th>Student</th><th>Roll</th><th>Dates</th><th>Reason</th><th>Decision</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for leave in leaves %}
+            <tr>
+                <td>{{ leave.student.user.full_name if leave.student and leave.student.user else leave.student_id }}</td>
+                <td>{{ leave.student.roll_number if leave.student else '-' }}</td>
+                <td>{{ leave.starts_on }} to {{ leave.ends_on }}</td>
+                <td>{{ leave.reason }}</td>
+                <td><span class="badge text-bg-{% if leave.decision == 'approved' %}success{% elif leave.decision == 'rejected' %}danger{% else %}warning{% endif %}">{{ leave.decision }}</span></td>
+                <td>
+                    <div class="d-flex flex-wrap gap-2">
+                        <form method="post" action="{{ url_for('admin.decide_leave', leave_id=leave.id, decision='approved') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success">Approve</button></form>
+                        <form method="post" action="{{ url_for('admin.decide_leave', leave_id=leave.id, decision='rejected') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-danger">Reject</button></form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-body-secondary py-4">No leave records.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

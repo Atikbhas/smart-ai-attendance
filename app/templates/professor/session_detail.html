@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Session {{ session.id }}{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h3>Session {{ session.id }}</h3>
+    <p>Method: {{ session.method }} | Starts: {{ session.starts_at }} | Ends: {{ session.ends_at or '' }}</p>
+    <div class="mb-2">
+        <a href="{{ url_for('professor.export_session_csv', session_id=session.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-filetype-csv"></i> Export CSV</a>
+        <a href="{{ url_for('professor.export_session_excel', session_id=session.id) }}" class="btn btn-sm btn-outline-orange"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+        <a href="{{ url_for('professor.export_session_pdf', session_id=session.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i> Export PDF</a>
+    </div>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Marked At</th>
+                <th>Confidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in attendances %}
+            <tr>
+                <td>
+                    {% set student = a.student %}
+                    {% if student and student.user %}
+                        {{ student.user.first_name }} {{ student.user.last_name }}
+                    {% else %}
+                        {{ a.student_id }}
+                    {% endif %}
+                </td>
+                <td>{{ a.marked_at }}</td>
+                <td>{{ (a.confidence_score * 100)|round(1) ~ '%' if a.confidence_score is not none else '' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3">No attendance records.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

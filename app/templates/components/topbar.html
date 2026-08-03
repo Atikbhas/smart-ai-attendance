@@ -1,0 +1,52 @@
+<header class="topbar">
+    <div class="topbar-left">
+        <div>
+            <p class="eyebrow">Workspace</p>
+            <h1>{% block page_title %}{{ current_user.full_name }}{% endblock %}</h1>
+        </div>
+    </div>
+    <div class="topbar-right d-flex align-items-center gap-3">
+        <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle theme"><i class="bi bi-moon-stars-fill"></i></button>
+        <div class="notifications-wrapper">
+            <button id="notificationsToggle" class="icon-btn" type="button" aria-label="Notifications" aria-expanded="false">
+                <i class="bi bi-bell"></i>
+            </button>
+            <div id="notificationsDropdown" class="notifications-dropdown" role="menu" aria-label="Notifications">
+                <div class="notifications-header">
+                    <strong>Notifications</strong>
+                    <span class="notifications-count">2 new</span>
+                </div>
+                <div class="notifications-list">
+                    <div class="notification-item">
+                        <i class="bi bi-calendar2-event text-orange"></i>
+                        <div>
+                            <p>Timetable updated</p>
+                            <small>New class schedule is available.</small>
+                        </div>
+                    </div>
+                    <div class="notification-item">
+                        <i class="bi bi-check-circle text-orange"></i>
+                        <div>
+                            <p>Attendance synced</p>
+                            <small>Your latest attendance is now visible.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Touch 'Devang' User Profile Button -> Display Student Photo if uploaded -->
+        <a href="{% if current_user.role_name == 'admin' %}{{ url_for('admin.profile') }}{% elif current_user.role_name == 'student' %}{{ url_for('student.profile') }}{% else %}{{ url_for('timetable.view') }}{% endif %}" 
+           class="profile-pill btn p-0 border-0 d-flex align-items-center gap-2 text-light text-decoration-none" 
+           title="Click to view full profile details" 
+           style="cursor: pointer;">
+            {% if current_user.student_profile and current_user.student_profile.profile_photo %}
+            <img src="{{ url_for('static', filename=current_user.student_profile.profile_photo) }}" 
+                 class="rounded-circle object-fit-cover shadow-sm border border-warning" 
+                 style="width: 36px; height: 36px; display: inline-block;" alt="Profile Photo">
+            {% else %}
+            <span class="avatar bg-warning text-dark fw-bold rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 34px; height: 34px; font-size: 0.95rem;">{{ current_user.first_name[0] }}</span>
+            {% endif %}
+            <span class="fw-bold fs-6 text-light">{{ current_user.first_name }}</span>
+        </a>
+    </div>
+</header>

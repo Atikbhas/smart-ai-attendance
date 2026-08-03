@@ -1,0 +1,21 @@
+﻿{% extends "base.html" %}
+{% block title %}Create Course{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="eyebrow">Academic setup</p>
+        <h1>Create course</h1>
+    </div>
+    <a class="btn btn-secondary" href="{{ url_for('admin.courses') }}">Back to courses</a>
+</div>
+<div class="card">
+    <form method="post" class="row g-3" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="col-md-6">{{ form.name.label(class="form-label") }}{{ form.name(class="form-control", placeholder="BSc Computer Science") }}</div>
+        <div class="col-md-6">{{ form.code.label(class="form-label") }}{{ form.code(class="form-control", placeholder="BSC-CS") }}</div>
+        <div class="col-md-6">{{ form.department_id.label(class="form-label") }}{{ form.department_id(class="form-select") }}</div>
+        <div class="col-12">{{ form.submit(class="btn btn-primary") }}</div>
+    </form>
+</div>
+{% endblock %}
+

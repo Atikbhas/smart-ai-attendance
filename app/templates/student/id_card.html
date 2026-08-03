@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Digital ID Card{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="eyebrow">Student Identity</p>
+        <h1>Digital Student ID Card</h1>
+    </div>
+    <div class="d-flex gap-2">
+        <button onclick="window.print()" class="btn btn-primary"><i class="bi bi-printer-fill"></i> Print ID Card</button>
+        <a class="btn btn-secondary" href="{{ url_for('student.dashboard') }}">Dashboard</a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+        <div class="card p-0 overflow-hidden shadow-lg border-orange-glow" id="student-id-card" style="border: 2px solid var(--accent-orange); background: var(--gradient-dark-card);">
+            <!-- ID Header Banner -->
+            <div class="p-3 text-center" style="background: var(--gradient-orange); color: #000;">
+                <div class="d-flex align-items-center justify-content-center gap-2">
+                    <span class="brand-mark bg-dark text-orange" style="width:2.2rem; height:2.2rem; font-size:0.9rem;">AI</span>
+                    <div>
+                        <h4 class="mb-0 text-dark fw-bold text-uppercase" style="letter-spacing:0.05em; font-size:1.1rem;">AI ATTENDANCE COLLEGE</h4>
+                        <small class="text-dark fw-bold opacity-75">OFFICIAL DIGITAL STUDENT IDENTIFICATION</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="p-4">
+                <div class="row align-items-center g-3">
+                    <div class="col-sm-5 text-center">
+                        <div class="avatar mx-auto mb-2" style="width:6.5rem; height:6.5rem; font-size:2.8rem; border:3px solid var(--accent-orange);">
+                            {{ student.user.first_name[0] }}
+                        </div>
+                        <span class="badge badge-success text-uppercase">{{ student.status.value }}</span>
+                    </div>
+
+                    <div class="col-sm-7">
+                        <h3 class="mb-1 text-white fw-bold">{{ student.user.full_name }}</h3>
+                        <p class="text-orange fw-bold mb-3" style="font-size:1.1rem;">Roll No: {{ student.roll_number }}</p>
+
+                        <div class="d-grid gap-1 text-secondary" style="font-size:0.9rem;">
+                            <div><strong class="text-white">Email:</strong> {{ student.user.email }}</div>
+                            <div><strong class="text-white">Gender:</strong> {{ student.gender or 'N/A' }}</div>
+                            <div><strong class="text-white">Course:</strong> {{ student.course.name if student.course else 'General Studies' }}</div>
+                            <div><strong class="text-white">Issued:</strong> {{ student.created_at.strftime('%b %Y') if student.created_at else '2026' }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr style="border-color: var(--border-medium); margin: 1.5rem 0;" />
+
+                <!-- QR Code Box -->
+                <div class="text-center p-3 rounded-4" style="background: rgba(255, 102, 0, 0.06); border: 1px dashed var(--accent-orange);">
+                    <p class="eyebrow mb-2">Scan for Attendance</p>
+                    <img src="{{ qr_uri }}" alt="Student QR Code" class="img-fluid rounded-3 bg-white p-2" style="max-width:180px; box-shadow: 0 8px 25px rgba(255,102,0,0.3);" />
+                    <p class="small text-muted mt-2 mb-0">Show this QR Code to your Professor's phone camera to mark attendance.</p>
+                </div>
+            </div>
+
+            <!-- Card Footer -->
+            <div class="p-2 text-center text-muted" style="background: rgba(0,0,0,0.5); font-size:0.75rem;">
+                Property of AI Attendance System · Verified Digital Identity
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

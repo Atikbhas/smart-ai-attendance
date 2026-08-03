@@ -1,0 +1,131 @@
+﻿{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block guest_content %}
+<div class="auth-shell">
+    <div class="auth-panel">
+        <div class="auth-visual">
+            <div class="auth-brand">
+                <div class="brand-mark">AI</div>
+                <div>
+                    <p class="eyebrow">AI Attendance</p>
+                    <h1>Secure, smart, and effortless.</h1>
+                </div>
+            </div>
+
+            <div class="auth-visual-card">
+                <div class="auth-visual-badge">
+                    <i class="bi bi-camera-reels"></i>
+                    <span>Live face recognition</span>
+                </div>
+                <div class="auth-visual-grid">
+                    <div class="mini-card">
+                        <i class="bi bi-shield-check"></i>
+                        <span>Protected sessions</span>
+                    </div>
+                    <div class="mini-card">
+                        <i class="bi bi-graph-up-arrow"></i>
+                        <span>Instant analytics</span>
+                    </div>
+                    <div class="mini-card">
+                        <i class="bi bi-people-fill"></i>
+                        <span>Trusted attendance</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auth-visual-footer">
+                <p>Manage classes, professors, students, and live attendance from one elegant workspace.</p>
+            </div>
+        </div>
+
+        <div class="auth-card">
+            <div class="auth-card__header">
+                <p class="eyebrow">Welcome back</p>
+                <h2>Sign in to your workspace</h2>
+                <p class="auth-card__text">Access your dashboard and continue managing the attendance workflow.</p>
+            </div>
+
+            <form id="loginForm" method="post" novalidate>
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    <label class="form-label" for="email">Email or ID</label>
+                    <div class="auth-input-group">
+                        <i class="bi bi-envelope"></i>
+                        {{ form.email(class="form-control form-control-lg", placeholder="admin@example.com or FAC-01", autocomplete="username") }}
+                    </div>
+                    {% if form.email.errors %}
+                        <div class="form-error">{{ form.email.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="auth-input-group">
+                        <i class="bi bi-lock"></i>
+                        {{ form.password(class="form-control form-control-lg", placeholder="Enter password", autocomplete="current-password") }}
+                        <button class="auth-toggle" type="button" id="togglePassword" aria-label="Show password">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    {% if form.password.errors %}
+                        <div class="form-error">{{ form.password.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="auth-form-footer">
+                    <div class="form-check">
+                        {{ form.remember(class="form-check-input") }}
+                        {{ form.remember.label(class="form-check-label") }}
+                    </div>
+                    <a class="auth-link" href="{{ url_for('auth.forgot_password') }}">Forgot password?</a>
+                </div>
+
+                <button class="btn btn-auth-submit w-100 btn-lg" type="submit" id="submitBtn">
+                    <span class="btn-text">Sign in</span>
+                    <span class="btn-spinner" aria-hidden="true"><i class="bi bi-arrow-repeat"></i></span>
+                </button>
+            </form>
+
+            <div class="auth-divider">
+                <span>Demo access</span>
+            </div>
+
+            <div class="auth-demo-card">
+                <p><strong>Admin:</strong> admin@example.com / Admin@12345</p>
+                <p><strong>Professor:</strong> professor1@example.com / Professor@1123</p>
+                <p class="mb-0"><strong>Or ID:</strong> FAC-01 / Student roll: STU-01</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('loginForm');
+        const button = document.getElementById('submitBtn');
+        const toggle = document.getElementById('togglePassword');
+        const passwordInput = document.querySelector('input[name="password"]');
+
+        if (toggle && passwordInput) {
+            toggle.addEventListener('click', function () {
+                const isHidden = passwordInput.type === 'password';
+                passwordInput.type = isHidden ? 'text' : 'password';
+                const icon = this.querySelector('i');
+                icon.className = isHidden ? 'bi bi-eye-slash' : 'bi bi-eye';
+                this.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+            });
+        }
+
+        if (form && button) {
+            form.addEventListener('submit', function () {
+                button.classList.add('is-loading');
+                button.disabled = true;
+            });
+        }
+    });
+</script>
+{% endblock %}
+

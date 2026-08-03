@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Admin portal</p>
+        <h1>Institution dashboard</h1>
+        <p class="auth-card__text">A premium command center for attendance, staff, and student operations.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-secondary" href="{{ url_for('admin.face_recognition') }}">Face recognition status</a>
+        <a class="btn btn-primary" href="{{ url_for('admin.create_student') }}">Add student</a>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-4 g-3">
+    {% for label, value in stats.items() %}
+    <article class="card p-4">
+        <div class="d-flex justify-content-between align-items-center text-muted mb-3">
+            <span>{{ label|replace("_", " ")|title }}</span>
+            <i class="bi bi-chevron-right"></i>
+        </div>
+        <strong class="count-up">{{ value }}</strong>
+    </article>
+    {% endfor %}
+</div>
+
+<section class="panel modules-panel">
+    <div class="mb-3">
+        <div>
+            <p class="eyebrow">AI attendance modules</p>
+            <h2>Premium productivity tools</h2>
+        </div>
+    </div>
+    <div class="modules-grid">
+        <article class="card p-4">
+            <div class="mb-3"><i class="bi bi-person-lines-fill"></i></div>
+            <h3>Face Recognition</h3>
+            <p>Real-time AI powered face recognition attendance system.</p>
+            <a class="btn btn-link" href="{{ url_for('admin.face_recognition') }}">Open Module</a>
+        </article>
+        <article class="card p-4">
+            <div class="mb-3"><i class="bi bi-qr-code-scan"></i></div>
+            <h3>QR Code Attendance</h3>
+            <p>Generate and scan live QR codes for fast attendance.</p>
+            <a class="btn btn-link" href="{{ url_for('professor.qr_attendance') }}">Open Module</a>
+        </article>
+        <article class="card p-4">
+            <div class="mb-3"><i class="bi bi-graph-up"></i></div>
+            <h3>Auto Attendance Analytics</h3>
+            <p>Attendance prediction, trends, and performance insights.</p>
+            <a class="btn btn-link" href="{{ url_for('professor.analytics_index') }}">Open Module</a>
+        </article>
+        <article class="card p-4">
+            <div class="mb-3"><i class="bi bi-calendar-check-fill"></i></div>
+            <h3>Leave Management</h3>
+            <p>Apply, approve, reject leave and keep track of calendars.</p>
+            <a class="btn btn-link" href="{{ url_for('admin.leave_requests') }}">Open Module</a>
+        </article>
+        <article class="card p-4">
+            <div class="mb-3"><i class="bi bi-file-earmark-spreadsheet-fill"></i></div>
+            <h3>Report Generation</h3>
+            <p>Generate PDF, Excel and CSV attendance reports.</p>
+            <a class="btn btn-link" href="{{ url_for('admin.master_attendance') }}">Open Module</a>
+        </article>
+        <article class="card p-4">
+            <div class="mb-3"><i class="bi bi-person-badge-fill"></i></div>
+            <h3>Professor Management</h3>
+            <p>Today's classes, history, staff list and analytics.</p>
+            <a class="btn btn-link" href="{{ url_for('admin.professors') }}">Open Module</a>
+        </article>
+        <article class="card p-4">
+            <div class="mb-3"><i class="bi bi-person-circle"></i></div>
+            <h3>Student Management</h3>
+            <p>Attendance overview, student directory and face data.</p>
+            <a class="btn btn-link" href="{{ url_for('admin.students') }}">Open Module</a>
+        </article>
+        <article class="card p-4">
+            <div class="mb-3"><i class="bi bi-calendar-event-fill"></i></div>
+            <h3>Class Scheduler</h3>
+            <p>Timetable, upcoming classes and room allocation tools.</p>
+            <a class="btn btn-link" href="{{ url_for('timetable.admin_builder') }}">Open Module</a>
+        </article>
+    </div>
+</section>
+
+<div class="row g-3">
+    <div class="panel table-panel">
+        <div class="mb-3">
+            <div>
+                <p class="eyebrow">Recent activity</p>
+                <h3>Recent attendance</h3>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-borderless recent-table">
+                <thead>
+                    <tr><th>Photo</th><th>Student</th><th>Enrollment</th><th>Status</th><th>Time</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><span class="avatar avatar-sm font-bold">DS</span></td><td>Devang Sanchala</td><td>9227059237</td><td><span class="badge badge-success">Present</span></td><td>09:15 AM</td></tr>
+                    <tr><td><span class="avatar avatar-sm font-bold">AS</span></td><td>Amy Scott</td><td>STU-0034</td><td><span class="badge badge-warning">Late</span></td><td>09:22 AM</td></tr>
+                    <tr><td><span class="avatar avatar-sm font-bold">RK</span></td><td>Ravi Kumar</td><td>STU-0078</td><td><span class="badge badge-danger">Absent</span></td><td>09:27 AM</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

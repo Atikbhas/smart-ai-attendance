@@ -1,0 +1,8 @@
+Single-database configuration for Flask-Migrate.
+
+Run these commands after installing dependencies and configuring `DATABASE_URL`:
+
+```text
+flask db migrate -m "phase 1 core schema"
+flask db upgrade
+```

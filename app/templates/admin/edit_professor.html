@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Edit Professor{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="eyebrow">Admin Portal</p>
+        <h1>Edit Professor Profile</h1>
+    </div>
+    <a class="btn btn-secondary" href="{{ url_for('admin.professors') }}">Back to Professors</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card p-4">
+            <form method="post">
+                {{ form.csrf_token }}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">First Name</label>
+                        {{ form.first_name(class="form-control") }}
+                        {% if form.first_name.errors %}<div class="text-danger small">{{ form.first_name.errors[0] }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Last Name</label>
+                        {{ form.last_name(class="form-control") }}
+                        {% if form.last_name.errors %}<div class="text-danger small">{{ form.last_name.errors[0] }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email Address</label>
+                        {{ form.email(class="form-control") }}
+                        {% if form.email.errors %}<div class="text-danger small">{{ form.email.errors[0] }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Employee Code</label>
+                        {{ form.employee_code(class="form-control") }}
+                        {% if form.employee_code.errors %}<div class="text-danger small">{{ form.employee_code.errors[0] }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Department</label>
+                        {{ form.department_id(class="form-select") }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">New Password (optional)</label>
+                        {{ form.new_password(class="form-control", placeholder="Leave blank to keep existing password") }}
+                    </div>
+                    <div class="col-12 mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-lg"></i> Update Professor Profile</button>
+                        <a href="{{ url_for('admin.professors') }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

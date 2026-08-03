@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Edit Student{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="eyebrow">Admin Portal</p>
+        <h1>Edit Student Profile</h1>
+    </div>
+    <a class="btn btn-secondary" href="{{ url_for('admin.students') }}">Back to Students</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card p-4">
+            <form method="post">
+                {{ form.csrf_token }}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">First Name</label>
+                        {{ form.first_name(class="form-control") }}
+                        {% if form.first_name.errors %}<div class="text-danger small">{{ form.first_name.errors[0] }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Last Name</label>
+                        {{ form.last_name(class="form-control") }}
+                        {% if form.last_name.errors %}<div class="text-danger small">{{ form.last_name.errors[0] }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email Address</label>
+                        {{ form.email(class="form-control") }}
+                        {% if form.email.errors %}<div class="text-danger small">{{ form.email.errors[0] }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Roll Number / Student ID</label>
+                        {{ form.roll_number(class="form-control") }}
+                        {% if form.roll_number.errors %}<div class="text-danger small">{{ form.roll_number.errors[0] }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="bi bi-upc-scan me-1"></i>College ID Card Barcode</label>
+                        {{ form.barcode_id(class="form-control", placeholder="e.g. 9227059237") }}
+                        <div class="form-text">Physical ID card barcode number. Used for scanning real ID cards during attendance.</div>
+                        {% if form.barcode_id.errors %}<div class="text-danger small">{{ form.barcode_id.errors[0] }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Gender</label>
+                        {{ form.gender(class="form-select") }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Course</label>
+                        {{ form.course_id(class="form-select") }}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">New Password (optional)</label>
+                        {{ form.new_password(class="form-control", placeholder="Leave blank to keep existing password") }}
+                    </div>
+                    <div class="col-12 mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-lg"></i> Update Student Profile</button>
+                        <a href="{{ url_for('admin.students') }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

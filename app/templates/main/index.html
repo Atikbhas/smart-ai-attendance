@@ -1,0 +1,23 @@
+﻿{% extends "base.html" %}
+{% block title %}AI Attendance Management{% endblock %}
+{% block guest_content %}
+<section class="hero-panel">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-7">
+            <p class="eyebrow">Smart campus attendance</p>
+            <h1>AI Attendance Management System</h1>
+            <p class="text-muted mb-4">Role-based attendance, face recognition readiness, QR sessions, leave workflows, analytics, and exportable reports in one Flask application.</p>
+            <a class="btn btn-primary btn-lg" href="{{ url_for('auth.login') }}">Open portal</a>
+        </div>
+        <div class="col-lg-5">
+            <div class="metric-board">
+                <div><span>Face</span><strong>Ready</strong></div>
+                <div><span>QR</span><strong>Secure</strong></div>
+                <div><span>Reports</span><strong>PDF</strong></div>
+                <div><span>Roles</span><strong>3</strong></div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

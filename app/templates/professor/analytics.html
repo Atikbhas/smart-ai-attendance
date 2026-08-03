@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Analytics{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="eyebrow">Automated insights</p>
+        <h1>Attendance analytics</h1>
+    </div>
+    <a href="{{ url_for('professor.analytics_export_pdf', class_id=class_id, subject_id=subject_id, start_date=start_date, end_date=end_date) }}" class="btn btn-secondary">Export PDF</a>
+</div>
+
+<div class="card">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Class</label>
+            <select name="class_id" class="form-select">
+                <option value="">All classes</option>
+                {% for c in classes %}
+                <option value="{{ c.id }}" {% if class_id and class_id|int == c.id %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Subject</label>
+            <select name="subject_id" class="form-select">
+                <option value="">All subjects</option>
+                {% for s in subjects %}
+                <option value="{{ s.id }}" {% if subject_id and subject_id|int == s.id %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Start</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">End</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}">
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100">Filter</button>
+        </div>
+    </form>
+</div>
+
+<div class="row row-cols-1 row-cols-md-4 g-3">
+    <article class="card p-4"><div class="text-muted mb-2">Sessions</div><strong class="count-up">{{ stats.sessions }}</strong></article>
+    <article class="card p-4"><div class="text-muted mb-2">Attendance marks</div><strong class="count-up">{{ stats.attendance_marks }}</strong></article>
+    <article class="card p-4"><div class="text-muted mb-2">Students marked</div><strong class="count-up">{{ stats.students_marked }}</strong></article>
+    <article class="card p-4"><div class="text-muted mb-2">Attendance rate</div><strong>{{ stats.attendance_rate }}%</strong></article>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card">
+            <p class="eyebrow">Insight</p>
+            <h3>Automated summary</h3>
+            <p>{{ insight }}</p>
+            <div class="d-flex flex-column gap-2">
+                <span>Estimated absences: <strong>{{ stats.estimated_absences }}</strong></span>
+                <span>Late rate: <strong>{{ stats.late_rate }}%</strong></span>
+                <span>Enrolled students: <strong>{{ stats.enrolled_students }}</strong></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="mb-3">
+                <p class="eyebrow">Recent records</p>
+                <h3>Latest attendance marks</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Student</th><th>Status</th><th>Method</th><th>Marked at</th></tr></thead>
+                    <tbody>
+                    {% for attendance in recent_attendances %}
+                    <tr>
+                        <td>{{ attendance.student.user.full_name if attendance.student and attendance.student.user else attendance.student_id }}</td>
+                        <td><span class="badge text-bg-{% if attendance.attendance_status == 'present' %}success{% elif attendance.attendance_status == 'late' %}warning{% else %}secondary{% endif %}">{{ attendance.attendance_status }}</span></td>
+                        <td>{{ attendance.session.method if attendance.session else '-' }}</td>
+                        <td>{{ attendance.marked_at.strftime('%Y-%m-%d %H:%M') if attendance.marked_at else '-' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="text-center text-body-secondary py-4">Selected filters ma attendance records nathi.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

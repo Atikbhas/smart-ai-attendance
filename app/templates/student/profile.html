@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Student Digital ID & Profile | AI Attendance System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 student-profile-page">
+
+    <!-- Top Header -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <h2 class="h3 fw-bold mb-1"><i class="bi bi-person-badge me-2 text-warning"></i>Student Official Digital Profile</h2>
+            <p class="text-secondary small mb-0">Official institutional identity card and personal profile details.</p>
+        </div>
+        <div>
+            <a href="{{ url_for('student.leave_requests') }}" class="btn btn-outline-warning fw-bold px-3 me-2">
+                <i class="bi bi-calendar-check me-1"></i>Leave Requests
+            </a>
+            <button onclick="window.print()" class="btn btn-warning fw-bold px-3">
+                <i class="bi bi-printer me-1"></i>Print / Download ID Card
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        
+        <!-- Left Column: Digital ID Card (Idea #1) -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-lg overflow-hidden" style="background: linear-gradient(145deg, #0d0d12 0%, #151520 100%); border: 1px solid rgba(255, 102, 0, 0.3) !important;">
+                
+                <!-- ID Card Header Banner -->
+                <div class="p-3 text-center position-relative" style="background: linear-gradient(90deg, #FF6600 0%, #e65c00 100%); color: #000;">
+                    <div class="fw-bolder tracking-wide text-uppercase" style="font-size: 0.95rem; letter-spacing: 1px;">DEPARTMENT OF COMPUTER APPLICATIONS</div>
+                    <div class="small fw-bold opacity-75">OFFICIAL STUDENT DIGITAL IDENTIFICATION</div>
+                </div>
+
+                <!-- ID Card Body -->
+                <div class="card-body p-4 text-center">
+                    
+                    <!-- Avatar & Badge -->
+                    <div class="position-relative d-inline-block mb-3">
+                        <div class="rounded-circle p-1" style="background: linear-gradient(45deg, #FF6600, #0dcaf0); width: 115px; height: 115px; margin: 0 auto;">
+                            {% if student.profile_photo %}
+                            <img src="{{ url_for('static', filename=student.profile_photo) }}" 
+                                 class="rounded-circle img-fluid w-100 h-100 object-fit-cover shadow" alt="Student Photo">
+                            {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ student.user.first_name }}+{{ student.user.last_name }}&background=050507&color=FF6600&size=128" 
+                                 class="rounded-circle img-fluid w-100 h-100 object-fit-cover" alt="Student Photo">
+                            {% endif %}
+                        </div>
+                        <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-success border border-dark">
+                            <i class="bi bi-patch-check-fill me-1"></i>VERIFIED
+                        </span>
+                    </div>
+
+                    <h4 class="fw-bold text-light mb-1">{{ student.user.full_name }}</h4>
+                    <p class="badge bg-warning text-dark font-monospace fw-bold mb-3 fs-6">{{ student.roll_number or ('STU-' ~ student.id) }}</p>
+
+                    <div class="row g-2 text-start small mb-4 bg-dark p-3 rounded-3 border border-secondary">
+                        <div class="col-6">
+                            <span class="text-secondary d-block">Course / Degree:</span>
+                            <span class="fw-bold text-light">{{ student.course.code if student.course else 'BCA' }}</span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-secondary d-block">Class / Semester:</span>
+                            <span class="fw-bold text-light">{{ student.classroom.name if student.classroom else 'Sem 5' }}</span>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <span class="text-secondary d-block">Blood Group:</span>
+                            <span class="badge bg-danger text-light">{{ student.blood_group or 'B+' }}</span>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <span class="text-secondary d-block">Emergency Phone:</span>
+                            <span class="fw-bold text-warning">{{ student.emergency_contact or student.phone_number or '+91 98765 43210' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Prominent Stylish Clean QR Code Section -->
+                    <div class="p-3 rounded-3 mb-2 text-center" style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,102,0,0.3);">
+                        {% if qr_uri %}
+                        <div class="position-relative d-inline-block p-2 bg-white rounded-3 shadow-lg"
+                             style="border: 2px solid #FF6600; box-shadow: 0 0 20px rgba(255, 102, 0, 0.5) !important; transition: transform 0.3s ease;"
+                             onmouseover="this.style.transform='scale(1.06)'"
+                             onmouseout="this.style.transform='scale(1.0)'">
+                            <img src="{{ qr_uri }}" class="img-fluid rounded" style="width: 160px; height: 160px; display: block;" alt="Student QR Code">
+                            <div class="bg-dark text-warning font-monospace fw-bold py-1 mt-1 rounded small" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                                <i class="bi bi-qr-code-scan me-1"></i>SCAN READY
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Personal & Guardian Information Widget -->
+        <div class="col-lg-7">
+            {% if student.is_profile_completed %}
+            <!-- READ-ONLY CARD (Shown after 1-Time Onboarding is Completed) -->
+            <div class="card border-0 shadow-lg p-4 bg-dark text-light border border-secondary rounded-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+                    <div>
+                        <h4 class="fw-bold mb-0 text-warning"><i class="bi bi-shield-check me-2"></i>Personal & Guardian Details</h4>
+                        <p class="small text-secondary mb-0">Saved institutional profile information.</p>
+                    </div>
+                    <button class="btn btn-outline-warning fw-semibold px-3" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                        <i class="bi bi-pencil-square me-1"></i>Edit Info
+                    </button>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-black border border-secondary">
+                            <span class="small text-secondary d-block mb-1"><i class="bi bi-telephone me-1 text-warning"></i>Student Phone Number</span>
+                            <span class="fw-bold fs-6 text-light font-monospace">{{ student.phone_number or 'Not provided' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-black border border-secondary">
+                            <span class="small text-secondary d-block mb-1"><i class="bi bi-droplet-fill me-1 text-danger"></i>Blood Group</span>
+                            <span class="badge bg-danger text-light fs-6 px-3 py-1">{{ student.blood_group or 'B+' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-black border border-secondary">
+                            <span class="small text-secondary d-block mb-1"><i class="bi bi-person-heart me-1 text-primary"></i>Guardian / Parent Name</span>
+                            <span class="fw-bold fs-6 text-light">{{ student.guardian_name or 'Not provided' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-black border border-secondary">
+                            <span class="small text-secondary d-block mb-1"><i class="bi bi-phone me-1 text-info"></i>Guardian Contact Phone</span>
+                            <span class="fw-bold fs-6 text-info font-monospace">{{ student.guardian_phone or 'Not provided' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="p-3 rounded-3 bg-black border border-secondary">
+                            <span class="small text-secondary d-block mb-1"><i class="bi bi-telephone-exclamation me-1 text-warning"></i>Emergency Contact Number</span>
+                            <span class="fw-bold fs-6 text-warning font-monospace">{{ student.emergency_contact or 'Not provided' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="p-3 rounded-3 bg-black border border-secondary">
+                            <span class="small text-secondary d-block mb-1"><i class="bi bi-house-door me-1 text-success"></i>Residential Address</span>
+                            <span class="text-light">{{ student.address or 'Not provided' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top border-secondary text-end">
+                    <a href="{{ url_for('student.leave_requests') }}" class="btn btn-outline-warning fw-bold px-4">
+                        <i class="bi bi-calendar-check me-2"></i>Go to Leave Requests
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <!-- MANDATORY ONE-TIME ONBOARDING FORM CARD -->
+            <div class="card border-0 shadow-lg p-4 bg-dark text-light border border-warning rounded-3 h-100" style="border-width: 2px !important;">
+                <div class="mb-4 border-bottom border-warning pb-3">
+                    <span class="badge bg-warning text-dark mb-2 fs-6 px-3 py-1"><i class="bi bi-exclamation-circle-fill me-1"></i>ACTION REQUIRED: ONE-TIME ONBOARDING</span>
+                    <h4 class="fw-bold mb-1 text-light">Complete Personal & Guardian Information</h4>
+                    <p class="small text-secondary mb-0">Please fill out your contact details once. Afterwards, this form will disappear.</p>
+                </div>
+                <form method="POST" action="{{ url_for('student.profile') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label text-warning small fw-bold"><i class="bi bi-camera-fill me-1"></i>Upload Official Student Profile Photo</label>
+                            <input type="file" name="profile_photo" class="form-control bg-dark text-light border-secondary" accept="image/*">
+                            <div class="form-text text-secondary small">Upload a clear passport-style photo (JPG or PNG).</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">First Name</label>
+                            <input type="text" name="first_name" class="form-control bg-dark text-light border-secondary" value="{{ student.user.first_name }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">Last Name</label>
+                            <input type="text" name="last_name" class="form-control bg-dark text-light border-secondary" value="{{ student.user.last_name }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">Student Phone</label>
+                            <input type="text" name="phone_number" class="form-control bg-dark text-light border-secondary" value="{{ student.phone_number or '' }}" placeholder="+91 9876543210" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">Blood Group</label>
+                            <select name="blood_group" class="form-select bg-dark text-light border-secondary">
+                                <option value="A+" {% if student.blood_group == 'A+' %}selected{% endif %}>A+</option>
+                                <option value="B+" {% if student.blood_group == 'B+' or not student.blood_group %}selected{% endif %}>B+</option>
+                                <option value="O+" {% if student.blood_group == 'O+' %}selected{% endif %}>O+</option>
+                                <option value="AB+" {% if student.blood_group == 'AB+' %}selected{% endif %}>AB+</option>
+                                <option value="A-" {% if student.blood_group == 'A-' %}selected{% endif %}>A-</option>
+                                <option value="B-" {% if student.blood_group == 'B-' %}selected{% endif %}>B-</option>
+                                <option value="O-" {% if student.blood_group == 'O-' %}selected{% endif %}>O-</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">Guardian Name</label>
+                            <input type="text" name="guardian_name" class="form-control bg-dark text-light border-secondary" value="{{ student.guardian_name or '' }}" placeholder="Parent / Guardian Name" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">Guardian Contact</label>
+                            <input type="text" name="guardian_phone" class="form-control bg-dark text-light border-secondary" value="{{ student.guardian_phone or '' }}" placeholder="+91 9876543210" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-secondary small">Emergency Contact Number</label>
+                            <input type="text" name="emergency_contact" class="form-control bg-dark text-light border-secondary" value="{{ student.emergency_contact or '' }}" placeholder="+91 9876543210" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-secondary small">Residential Address</label>
+                            <textarea name="address" rows="2" class="form-control bg-dark text-light border-secondary" placeholder="Home address..." required>{{ student.address or '' }}</textarea>
+                        </div>
+                        <div class="col-12 mt-4">
+                            <button type="submit" class="btn btn-warning w-100 fw-bold py-3 fs-6"><i class="bi bi-check-circle-fill me-2"></i>Save & Complete Onboarding</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal for Optional Editing Profile (Triggered by Edit Info Button) -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark text-light border border-secondary shadow-lg">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-warning fw-bold"><i class="bi bi-pencil-square me-2"></i>Update Personal Information</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('student.profile') }}" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label text-warning small fw-bold"><i class="bi bi-camera-fill me-1"></i>Update Profile Photo</label>
+                            <input type="file" name="profile_photo" class="form-control bg-dark text-light border-secondary" accept="image/*">
+                            <div class="form-text text-secondary small">Upload a clear passport-style photo (JPG or PNG).</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">First Name</label>
+                            <input type="text" name="first_name" class="form-control bg-dark text-light border-secondary" value="{{ student.user.first_name }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">Last Name</label>
+                            <input type="text" name="last_name" class="form-control bg-dark text-light border-secondary" value="{{ student.user.last_name }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">Student Phone</label>
+                            <input type="text" name="phone_number" class="form-control bg-dark text-light border-secondary" value="{{ student.phone_number or '' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">Blood Group</label>
+                            <select name="blood_group" class="form-select bg-dark text-light border-secondary">
+                                <option value="A+" {% if student.blood_group == 'A+' %}selected{% endif %}>A+</option>
+                                <option value="B+" {% if student.blood_group == 'B+' or not student.blood_group %}selected{% endif %}>B+</option>
+                                <option value="O+" {% if student.blood_group == 'O+' %}selected{% endif %}>O+</option>
+                                <option value="AB+" {% if student.blood_group == 'AB+' %}selected{% endif %}>AB+</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">Guardian Name</label>
+                            <input type="text" name="guardian_name" class="form-control bg-dark text-light border-secondary" value="{{ student.guardian_name or '' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small">Guardian Contact</label>
+                            <input type="text" name="guardian_phone" class="form-control bg-dark text-light border-secondary" value="{{ student.guardian_phone or '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-secondary small">Emergency Contact Number</label>
+                            <input type="text" name="emergency_contact" class="form-control bg-dark text-light border-secondary" value="{{ student.emergency_contact or '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-secondary small">Residential Address</label>
+                            <textarea name="address" rows="2" class="form-control bg-dark text-light border-secondary">{{ student.address or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning fw-bold px-4">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

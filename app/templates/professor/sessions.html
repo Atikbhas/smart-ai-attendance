@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Sessions{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h3>Attendance Sessions</h3>
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Method</th>
+                <th>Class</th>
+                <th>Subject</th>
+                <th>Starts At</th>
+                <th>Ends At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sessions %}
+            <tr>
+                <td>{{ s.id }}</td>
+                <td>{{ s.method }}</td>
+                <td>{{ s.classroom.name if s.classroom else '' }}</td>
+                <td>{{ s.subject.name if s.subject else '' }}</td>
+                <td>{{ s.starts_at }}</td>
+                <td>{{ s.ends_at or '' }}</td>
+                <td>
+                    <a href="{{ url_for('professor.export_session_csv', session_id=s.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-filetype-csv"></i> CSV</a>
+                    <a href="{{ url_for('professor.export_session_excel', session_id=s.id) }}" class="btn btn-sm btn-outline-orange"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+                    <a href="{{ url_for('professor.export_session_pdf', session_id=s.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7">No sessions found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

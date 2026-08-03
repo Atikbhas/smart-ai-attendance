@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% block title %}QR Attendance Scanner{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="eyebrow">Professor Portal</p>
+        <h1>ID Card QR Attendance Scanner</h1>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-secondary" href="{{ url_for('professor.dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a class="btn btn-secondary" href="{{ url_for('professor.list_sessions') }}"><i class="bi bi-list-task"></i> Sessions</a>
+    </div>
+</div>
+
+<!-- Controls Card -->
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card mb-3">
+            <div class="mb-3">
+                <p class="eyebrow">Session Setup</p>
+                <h3>Start Attendance Session</h3>
+            </div>
+            <div class="mb-3">
+                <label for="class_select" class="form-label">Class / Division</label>
+                <select id="class_select" class="form-select">
+                    <option value="">Select Class / Division</option>
+                    {% for c in classes %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="subject_select" class="form-label">Subject</label>
+                <select id="subject_select" class="form-select">
+                    <option value="">Select Subject</option>
+                    {% for s in subjects %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button id="start_qr_session" class="btn btn-primary flex-grow-1"><i class="bi bi-play-fill"></i> Start Session</button>
+                <button id="stop_qr_session" class="btn btn-secondary" disabled><i class="bi bi-stop-fill"></i> Stop Session</button>
+            </div>
+            <p id="session_status" class="text-muted mt-3 mb-0">Select class and subject to open mobile ID camera scanner.</p>
+        </div>
+
+        <!-- Live Session Stats -->
+        <div class="card">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <p class="eyebrow mb-1">Live Metrics</p>
+                    <h4 class="mb-0 text-white">Attendance Counter</h4>
+                </div>
+                <div class="badge badge-success text-uppercase p-2" id="live_status_badge">Ready</div>
+            </div>
+            
+            <div class="row text-center g-2 mb-3">
+                <div class="col-6">
+                    <div class="p-3 rounded-4" style="background: rgba(255,102,0,0.1); border: 1px solid var(--border-medium);">
+                        <small class="text-muted d-block uppercase">Scanned Students</small>
+                        <strong class="text-orange" id="live_marked_count" style="font-size:2rem;">0</strong>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-3 rounded-4" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-medium);">
+                        <small class="text-muted d-block uppercase">Session Timer</small>
+                        <strong class="text-white" id="session_timer" style="font-size:2rem;">00:00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Last Scanned Banner -->
+            <div id="scan_alert_box" class="alert alert-info d-none fade show align-items-center gap-3">
+                <div class="avatar bg-orange text-dark fw-bold" id="scan_alert_avatar" style="width:2.8rem; height:2.8rem;">S</div>
+                <div>
+                    <strong class="d-block text-white" id="scan_alert_name">Student Name</strong>
+                    <small class="text-orange" id="scan_alert_msg">Attendance Marked Successfully</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera Viewport & Scanned List -->
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <p class="eyebrow mb-1">Phone / Camera Scanner</p>
+                    <h3 class="mb-0">Scan Student College ID Card</h3>
+                </div>
+                <button id="switch_camera_btn" class="btn btn-sm btn-outline-orange" disabled><i class="bi bi-arrow-repeat"></i> Switch Camera</button>
+            </div>
+
+            <div id="camera_placeholder" class="text-center text-muted py-5 rounded-4" style="background: rgba(0,0,0,0.4); border: 1px dashed var(--border-medium);">
+                <i class="bi bi-camera-fill text-orange display-4 d-block mb-3"></i>
+                <p class="mb-0">Start a session above to activate your phone camera scanner.</p>
+            </div>
+
+            <div id="reader" class="rounded-4 overflow-hidden d-none" style="width: 100%; min-height: 320px; background:#000;"></div>
+
+            <!-- Manual / USB Barcode Scanner Gun Input -->
+            <div class="mt-3 p-3 rounded-4" style="background: rgba(255, 102, 0, 0.06); border: 1px solid var(--border-medium);">
+                <label for="quick_barcode_input" class="form-label text-orange fw-bold mb-2">
+                    <i class="bi bi-upc-scan"></i> Barcode Gun / Direct ID Input:
+                </label>
+                <div class="input-group">
+                    <input type="text" id="quick_barcode_input" class="form-control form-control-lg" placeholder="Scan Barcode Gun or Enter Roll No (e.g. 9227059237)..." disabled />
+                    <button id="quick_barcode_btn" class="btn btn-primary" disabled><i class="bi bi-check-circle-fill"></i> Mark Present</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recently Scanned Students -->
+        <div class="card">
+            <div class="mb-3">
+                <p class="eyebrow mb-1">Session Logs</p>
+                <h4 class="mb-0 text-white">Recently Scanned Students</h4>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Roll Number</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scanned_students_list">
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">No students scanned in this session yet.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+(function() {
+    const startBtn = document.getElementById('start_qr_session');
+    const stopBtn = document.getElementById('stop_qr_session');
+    const switchCamBtn = document.getElementById('switch_camera_btn');
+    const classSelect = document.getElementById('class_select');
+    const subjectSelect = document.getElementById('subject_select');
+    const sessionStatus = document.getElementById('session_status');
+    const liveMarkedCount = document.getElementById('live_marked_count');
+    const sessionTimerEl = document.getElementById('session_timer');
+    const liveStatusBadge = document.getElementById('live_status_badge');
+    const cameraPlaceholder = document.getElementById('camera_placeholder');
+    const readerEl = document.getElementById('reader');
+    const alertBox = document.getElementById('scan_alert_box');
+    const alertName = document.getElementById('scan_alert_name');
+    const alertMsg = document.getElementById('scan_alert_msg');
+    const alertAvatar = document.getElementById('scan_alert_avatar');
+    const scannedList = document.getElementById('scanned_students_list');
+
+    let html5QrCode = null;
+    let activeSessionId = null;
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let isProcessing = false;
+    let scannedSet = new Set();
+    let currentFacingMode = "environment"; // Rear camera default for phones!
+
+    // Play Web Audio Beep Sound
+    function playBeep(frequency = 880, type = 'sine') {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.frequency.value = frequency;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.25);
+            setTimeout(() => osc.stop(), 250);
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
+    function startTimer() {
+        secondsElapsed = 0;
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            secondsElapsed++;
+            const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+            const secs = String(secondsElapsed % 60).padStart(2, '0');
+            sessionTimerEl.textContent = `${mins}:${secs}`;
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+    }
+
+    function showAlert(name, message, avatarText, isSuccess = true) {
+        alertName.textContent = name;
+        alertMsg.textContent = message;
+        alertAvatar.textContent = avatarText || name[0] || 'S';
+        alertBox.className = `alert alert-${isSuccess ? 'success' : 'warning'} d-flex align-items-center gap-3 fade show`;
+        alertBox.classList.remove('d-none');
+        setTimeout(() => alertBox.classList.add('d-none'), 4000);
+    }
+
+    function addScannedRow(name, roll, time, status) {
+        if (scannedSet.size === 1) {
+            scannedList.innerHTML = '';
+        }
+        const tr = document.createElement('tr');
+        tr.className = 'table-row-new';
+        tr.innerHTML = `
+            <td class="fw-bold text-white">${name}</td>
+            <td class="text-orange">${roll}</td>
+            <td class="text-muted">${time}</td>
+            <td><span class="badge badge-success">${status.toUpperCase()}</span></td>
+        `;
+        scannedList.prepend(tr);
+    }
+
+    async function handleQrDecoded(decodedText) {
+        if (isProcessing || !activeSessionId) return;
+        isProcessing = true;
+
+        try {
+            const res = await csrfFetch('/professor/attendance/qr/scan', {
+                method: 'POST',
+                body: JSON.stringify({ session_id: activeSessionId, qr_data: decodedText })
+            });
+            const json = await res.json();
+
+            if (json.duplicate) {
+                playBeep(440, 'square');
+                showAlert(json.student_name, 'Attendance already marked for this session.', json.student_name[0], false);
+            } else if (json.success) {
+                playBeep(880, 'sine');
+                showAlert(json.student_name, `Marked PRESENT at ${json.marked_at}`, json.student_name[0], true);
+                liveMarkedCount.textContent = json.total_marked;
+                if (!scannedSet.has(json.student_id)) {
+                    scannedSet.add(json.student_id);
+                    addScannedRow(json.student_name, json.roll_number, json.marked_at, json.attendance_status);
+                }
+            } else {
+                playBeep(300, 'sawtooth');
+                showAlert('Invalid QR', json.error || 'Invalid Student ID', '!', false);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setTimeout(() => { isProcessing = false; }, 1500); // 1.5s debounce between scans
+        }
+    }
+
+    async function startCameraScanner() {
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader");
+        }
+        cameraPlaceholder.classList.add('d-none');
+        readerEl.classList.remove('d-none');
+
+        const config = {
+            fps: 15,
+            qrbox: { width: 300, height: 180 },
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.QR_CODE,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.ITF
+            ]
+        };
+        try {
+            await html5QrCode.start({ facingMode: currentFacingMode }, config, handleQrDecoded);
+            switchCamBtn.disabled = false;
+        } catch (err) {
+            console.warn("Camera start failed, trying user camera:", err);
+            try {
+                await html5QrCode.start({ facingMode: "user" }, config, handleQrDecoded);
+                switchCamBtn.disabled = false;
+            } catch (err2) {
+                sessionStatus.textContent = 'Camera permission denied or camera unavailable.';
+            }
+        }
+    }
+
+    async function stopCameraScanner() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            try {
+                await html5QrCode.stop();
+            } catch (e) {
+                console.warn(e);
+            }
+        }
+        readerEl.classList.add('d-none');
+        cameraPlaceholder.classList.remove('d-none');
+        switchCamBtn.disabled = true;
+    }
+
+    switchCamBtn.addEventListener('click', async () => {
+        currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+        await stopCameraScanner();
+        await startCameraScanner();
+    });
+
+    startBtn.addEventListener('click', async () => {
+        const classId = classSelect.value;
+        const subjectId = subjectSelect.value;
+        if (!classId || !subjectId) {
+            sessionStatus.textContent = 'Please select a Class and Subject first.';
+            return;
+        }
+
+        sessionStatus.textContent = 'Starting attendance session...';
+        try {
+            const res = await csrfFetch('/professor/session/start', {
+                method: 'POST',
+                body: JSON.stringify({ method: 'qr', class_id: classId, subject_id: subjectId })
+            });
+            const json = await res.json();
+            if (!json.session_id) {
+                sessionStatus.textContent = json.error || 'Failed to start session.';
+                return;
+            }
+
+            activeSessionId = json.session_id;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            classSelect.disabled = true;
+            subjectSelect.disabled = true;
+            quickInput.disabled = false;
+            quickBtn.disabled = false;
+            quickInput.focus();
+            liveStatusBadge.textContent = 'Active Session #' + activeSessionId;
+            liveStatusBadge.className = 'badge badge-success text-uppercase p-2';
+            sessionStatus.textContent = `Session #${activeSessionId} Active! Use camera scanner or Barcode Gun / Input below.`;
+
+            scannedSet.clear();
+            liveMarkedCount.textContent = '0';
+            startTimer();
+            await startCameraScanner();
+        } catch (err) {
+            console.error(err);
+            sessionStatus.textContent = 'Request failed: ' + err.message;
+        }
+    });
+
+    const quickInput = document.getElementById('quick_barcode_input');
+    const quickBtn = document.getElementById('quick_barcode_btn');
+
+    async function submitQuickBarcode() {
+        const val = quickInput.value.trim();
+        if (!val || !activeSessionId) return;
+        quickInput.value = '';
+        await handleQrDecoded(val);
+    }
+
+    if (quickBtn && quickInput) {
+        quickBtn.addEventListener('click', submitQuickBarcode);
+        quickInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitQuickBarcode();
+            }
+        });
+    }
+
+    stopBtn.addEventListener('click', async () => {
+        if (!activeSessionId) return;
+        sessionStatus.textContent = 'Stopping session...';
+        try {
+            const res = await csrfFetch('/professor/session/stop', {
+                method: 'POST',
+                body: JSON.stringify({ session_id: activeSessionId })
+            });
+            const json = await res.json();
+            if (json.stopped) {
+                sessionStatus.textContent = `Session #${activeSessionId} Stopped.`;
+                activeSessionId = null;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                classSelect.disabled = false;
+                subjectSelect.disabled = false;
+                quickInput.disabled = true;
+                quickBtn.disabled = true;
+                liveStatusBadge.textContent = 'Ended';
+                liveStatusBadge.className = 'badge badge-secondary text-uppercase p-2';
+                stopTimer();
+                await stopCameraScanner();
+            }
+        } catch (err) {
+            console.error(err);
+            sessionStatus.textContent = 'Failed stopping session.';
+        }
+    });
+})();
+</script>
+{% endblock %}

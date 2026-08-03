@@ -1,0 +1,573 @@
+{% extends "base.html" %}
+{% block title %}Face Attendance{% endblock %}
+{% block content %}
+<style>
+.camera-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid #FF6600;
+    background: #000;
+}
+.camera-wrapper video {
+    width: 100%;
+    display: block;
+    max-height: 400px;
+    object-fit: cover;
+}
+#overlay-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.face-status-badge {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    color: #FF6600;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 20px;
+    border: 1px solid #FF6600;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+}
+.session-timer {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #FF6600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+    min-width: 64px;
+    text-align: center;
+}
+.confidence-bar-wrap {
+    background: rgba(255,255,255,0.08);
+    border-radius: 8px;
+    height: 8px;
+    overflow: hidden;
+}
+.confidence-bar {
+    height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #FF6600, #ffaa00);
+    transition: width 0.3s;
+}
+.scan-indicator {
+    position: absolute;
+    bottom: 12px;
+    right: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #FF6600;
+    background: rgba(0,0,0,0.7);
+    border-radius: 14px;
+    padding: 4px 12px;
+    border: 1px solid #FF6600;
+    z-index: 10;
+    pointer-events: none;
+}
+.scan-indicator .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #FF6600;
+    animation: blink 1s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.marked-row-new {
+    animation: flashIn 0.5s ease-out;
+}
+@keyframes flashIn {
+    from { background: rgba(255,102,0,0.3); }
+    to { background: transparent; }
+}
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="eyebrow">Professor portal</p>
+        <h1>Real-time AI Face Attendance</h1>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-secondary" href="{{ url_for('professor.dashboard') }}">Dashboard</a>
+        <a class="btn btn-secondary" href="{{ url_for('professor.analytics_index') }}">Analytics</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- LEFT: Camera -->
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <p class="eyebrow">AI Camera Scanner</p>
+            <h3 class="mb-3">Live Face Recognition</h3>
+
+            <!-- Camera -->
+            <div class="camera-wrapper mb-3">
+                <video id="video" autoplay playsinline muted></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+                <canvas id="overlay-canvas"></canvas>
+                <div class="face-status-badge" id="face_status_badge">Camera initializing...</div>
+                <div class="scan-indicator" id="scan_indicator" style="display:none;">
+                    <div class="dot"></div> SCANNING
+                </div>
+            </div>
+
+            <!-- Confidence bar -->
+            <div class="mb-2">
+                <div class="d-flex justify-content-between mb-1">
+                    <small class="text-muted">Match Confidence</small>
+                    <small id="conf_text" class="text-orange fw-bold">—</small>
+                </div>
+                <div class="confidence-bar-wrap">
+                    <div class="confidence-bar" id="conf_bar" style="width:0%;"></div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
+                <button id="start_session" class="btn btn-primary"><i class="bi bi-play-fill"></i> Start Session</button>
+                <button id="stop_session" class="btn btn-warning" disabled><i class="bi bi-stop-fill"></i> Stop Session</button>
+                <button id="capture" class="btn btn-secondary" disabled><i class="bi bi-camera-fill"></i> Manual Scan</button>
+                <div class="ms-auto d-flex align-items-center gap-3">
+                    <div class="session-timer" id="session_timer" style="display:none;">00:00</div>
+                    <span class="badge badge-orange py-2 px-3" id="marked_count" style="font-size:0.95rem;">0 Marked</span>
+                </div>
+            </div>
+
+            <!-- Session Setup -->
+            <div class="row g-3 mt-2" id="session_setup">
+                <div class="col-md-6">
+                    <label class="form-label">Class</label>
+                    <select id="class_select" class="form-select">
+                        <option value="">Select Class</option>
+                        {% for c in classes %}
+                        <option value="{{ c.id }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Subject</label>
+                    <select id="subject_select" class="form-select">
+                        <option value="">Select Subject</option>
+                        {% for s in subjects %}
+                        <option value="{{ s.id }}">{{ s.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Live status -->
+            <div id="status_bar" class="mt-3 p-2 rounded d-flex align-items-center gap-2" style="background:rgba(255,102,0,0.05);border:1px solid rgba(255,102,0,0.2);">
+                <i class="bi bi-info-circle text-orange"></i>
+                <span id="status" class="small text-muted">Camera ready chhe. Class ane Subject select kari Session Start karo.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Log table -->
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <p class="eyebrow">Session Log</p>
+            <h3 class="mb-3">Marked Students</h3>
+            <div class="table-responsive" style="max-height:480px;overflow-y:auto;">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Student</th>
+                            <th>Status</th>
+                            <th>Conf.</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="marked_students">
+                        <tr id="empty_row"><td colspan="5" class="text-center text-muted py-4">Session start karo...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Quick stats -->
+            <div class="row g-2 mt-3" id="quick_stats" style="display:none!important;">
+                <div class="col-4 text-center">
+                    <div class="text-orange fw-bold fs-4" id="stat_present">0</div>
+                    <div class="text-muted small">Present</div>
+                </div>
+                <div class="col-4 text-center">
+                    <div class="fw-bold fs-4 text-warning" id="stat_late">0</div>
+                    <div class="text-muted small">Late</div>
+                </div>
+                <div class="col-4 text-center">
+                    <div class="fw-bold fs-4 text-danger" id="stat_dup">0</div>
+                    <div class="text-muted small">Duplicate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(async function() {
+    // Elements
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const overlayCanvas = document.getElementById('overlay-canvas');
+    const captureBtn = document.getElementById('capture');
+    const statusEl = document.getElementById('status');
+    const markedStudents = document.getElementById('marked_students');
+    const markedCountBadge = document.getElementById('marked_count');
+    const faceStatusBadge = document.getElementById('face_status_badge');
+    const scanIndicator = document.getElementById('scan_indicator');
+    const confBar = document.getElementById('conf_bar');
+    const confText = document.getElementById('conf_text');
+    const sessionTimer = document.getElementById('session_timer');
+    const quickStats = document.getElementById('quick_stats');
+
+    let activeSession = null;
+    let markedCount = 0;
+    let recognitionTimer = null;
+    let recognitionCooldownUntil = 0;
+    let recognitionInFlight = false;
+    let sessionStartTime = null;
+    let timerInterval = null;
+    let statPresent = 0, statLate = 0, statDup = 0;
+    let faceDetected = false;
+    let overlayCtx = overlayCanvas.getContext('2d');
+    let videoReady = false;
+    let scanLoopId = null;
+
+    // -- Audio Beep --
+    function beep(type) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            if (type === 'success') { osc.frequency.value = 880; gain.gain.value = 0.15; }
+            else if (type === 'dup') { osc.frequency.value = 440; gain.gain.value = 0.08; }
+            else { osc.frequency.value = 220; gain.gain.value = 0.08; }
+            osc.start(); osc.stop(ctx.currentTime + 0.18);
+        } catch(e) {}
+    }
+
+    // -- Overlay: draw face box --
+    function drawFaceBox(detected, color) {
+        overlayCanvas.width = video.offsetWidth;
+        overlayCanvas.height = video.offsetHeight;
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        if (!detected) return;
+        const w = overlayCanvas.width;
+        const h = overlayCanvas.height;
+        const bw = w * 0.4, bh = h * 0.55;
+        const bx = (w - bw) / 2, by = (h - bh) / 2.2;
+        overlayCtx.strokeStyle = color || '#FF6600';
+        overlayCtx.lineWidth = 3;
+        overlayCtx.shadowColor = color || '#FF6600';
+        overlayCtx.shadowBlur = 10;
+        // Corner markers only
+        const cs = 24;
+        [[bx,by],[bx+bw,by],[bx,by+bh],[bx+bw,by+bh]].forEach(([cx,cy],i) => {
+            overlayCtx.beginPath();
+            const dx = i%2===0?1:-1, dy = i<2?1:-1;
+            overlayCtx.moveTo(cx,cy); overlayCtx.lineTo(cx+dx*cs,cy);
+            overlayCtx.moveTo(cx,cy); overlayCtx.lineTo(cx,cy+dy*cs);
+            overlayCtx.stroke();
+        });
+    }
+
+    // -- Face detection loop (lightweight, using canvas diff) --
+    function startFaceDetectLoop() {
+        if (!video || !canvas) return;
+        const oc = new OffscreenCanvas(80, 60);
+        const oc2 = new OffscreenCanvas(80, 60);
+        const octx = oc.getContext('2d');
+        const octx2 = oc2.getContext('2d');
+        let prevData = null;
+        function loop() {
+            scanLoopId = requestAnimationFrame(loop);
+            if (!videoReady) return;
+            octx.drawImage(video, 0, 0, 80, 60);
+            const imgData = octx.getImageData(0, 0, 80, 60);
+            // Simple motion / presence detection: center region brightness
+            let sum = 0;
+            for (let i = 0; i < imgData.data.length; i += 4) {
+                sum += (imgData.data[i] + imgData.data[i+1] + imgData.data[i+2]) / 3;
+            }
+            const brightness = sum / (imgData.data.length/4);
+            // face presence heuristic: brightness not too low/high + some motion
+            let motion = 0;
+            if (prevData) {
+                for (let i = 0; i < imgData.data.length; i += 4) {
+                    motion += Math.abs(imgData.data[i] - prevData[i]);
+                }
+                motion /= (imgData.data.length/4);
+            }
+            prevData = imgData.data.slice();
+            const likely = brightness > 35 && brightness < 230;
+            faceDetected = likely;
+            if (activeSession) {
+                drawFaceBox(likely, likely ? '#FF6600' : '#ff4444');
+                faceStatusBadge.textContent = likely ? '✓ Face Detected' : '⚠ Face Clear Rakhavo';
+            } else {
+                drawFaceBox(false, '#FF6600');
+                faceStatusBadge.textContent = 'Session Start Karo';
+            }
+        }
+        loop();
+    }
+
+    // -- Timer --
+    function startTimer() {
+        sessionStartTime = Date.now();
+        sessionTimer.style.display = 'block';
+        timerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const s = String(elapsed % 60).padStart(2, '0');
+            sessionTimer.textContent = `${m}:${s}`;
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        sessionTimer.style.display = 'none';
+    }
+
+    function setStatus(msg, type='info') {
+        statusEl.textContent = msg;
+        statusEl.parentElement.style.borderColor = type==='success' ? '#28a745' : type==='danger' ? '#dc3545' : 'rgba(255,102,0,0.2)';
+    }
+
+    function updateMarkedCount() {
+        markedCountBadge.textContent = markedCount + ' Marked';
+    }
+
+    function updateStats() {
+        document.getElementById('stat_present').textContent = statPresent;
+        document.getElementById('stat_late').textContent = statLate;
+        document.getElementById('stat_dup').textContent = statDup;
+        quickStats.style.display = 'flex';
+    }
+
+    function setConfidence(val) {
+        if (val === null) {
+            confBar.style.width = '0%';
+            confText.textContent = '—';
+            return;
+        }
+        const pct = Math.round(val * 100);
+        confBar.style.width = pct + '%';
+        confText.textContent = pct + '%';
+        confBar.style.background = pct >= 75 ? 'linear-gradient(90deg,#28a745,#6fcf97)' : pct >= 50 ? 'linear-gradient(90deg,#FF6600,#ffaa00)' : 'linear-gradient(90deg,#dc3545,#ff6b6b)';
+    }
+
+    function addMarkedRow(json) {
+        markedCount += 1;
+        updateMarkedCount();
+        document.getElementById('empty_row')?.remove();
+        const row = document.createElement('tr');
+        row.className = 'marked-row-new';
+        const confidence = json.confidence ? Math.round(json.confidence * 100) + '%' : 'N/A';
+        const statusBadge = json.attendance_status === 'present' ? 'success' : json.attendance_status === 'late' ? 'warning' : 'secondary';
+        row.innerHTML = `
+            <td class="text-orange fw-bold">${markedCount}</td>
+            <td class="fw-bold">${json.student_name || ('ID: ' + json.student_id)}</td>
+            <td><span class="badge text-bg-${statusBadge}">${(json.attendance_status||'').toUpperCase()}</span></td>
+            <td>${confidence}</td>
+            <td class="text-muted small">${new Date().toLocaleTimeString()}</td>`;
+        markedStudents.prepend(row);
+        if (json.attendance_status === 'late') statLate++;
+        else statPresent++;
+        updateStats();
+    }
+
+    async function recognizeCurrentFrame(force = false) {
+        if (!activeSession) {
+            setStatus('Attendance mark karva pehla session start karo.');
+            return;
+        }
+        if (recognitionInFlight) return;
+        const now = Date.now();
+        if (!force && now < recognitionCooldownUntil) return;
+
+        recognitionInFlight = true;
+        scanIndicator.style.display = 'flex';
+        setStatus('Frame capture thai rahyu chhe...');
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+
+        // Capture frame 1
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl1 = canvas.toDataURL('image/jpeg', 0.82);
+        await new Promise(r => setTimeout(r, 650));
+
+        // Capture frame 2 (for liveness)
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl2 = canvas.toDataURL('image/jpeg', 0.82);
+        setStatus('AI model face check kari rahyu chhe...');
+
+        try {
+            const res = await csrfFetch('/professor/attendance/face', {
+                method: 'POST',
+                body: JSON.stringify({ frames: [dataUrl1, dataUrl2], image: dataUrl1, session_id: activeSession }),
+            });
+            const json = await res.json();
+
+            if (json.error) {
+                setStatus('⚠ ' + json.error, 'danger');
+                setConfidence(null);
+                drawFaceBox(true, '#ff4444');
+                recognitionCooldownUntil = Date.now() + 3000;
+                return;
+            }
+
+            if (!json.recognized) {
+                setStatus('Known student face malyo nathi. Camera pase aao.', 'info');
+                setConfidence(null);
+                recognitionCooldownUntil = Date.now() + 1200;
+                return;
+            }
+
+            setConfidence(json.confidence);
+            if (json.persisted) {
+                beep('success');
+                setStatus(`✓ ${json.student_name} — Attendance marked (${json.attendance_status})`, 'success');
+                drawFaceBox(true, '#28a745');
+                recognitionCooldownUntil = Date.now() + 9000;
+                addMarkedRow(json);
+            } else if (json.duplicate) {
+                beep('dup');
+                statDup++;
+                updateStats();
+                setStatus(`ℹ ${json.student_name} — Attendance already marked.`, 'info');
+                recognitionCooldownUntil = Date.now() + 5000;
+            } else {
+                setStatus('⚠ Recognition successful pan attendance save thai nathi.', 'danger');
+                recognitionCooldownUntil = Date.now() + 3000;
+            }
+        } catch (err) {
+            setStatus('Request fail thai: ' + err.message, 'danger');
+            recognitionCooldownUntil = Date.now() + 3000;
+        } finally {
+            recognitionInFlight = false;
+            scanIndicator.style.display = 'none';
+        }
+    }
+
+    function stopRealtimeRecognition() {
+        if (recognitionTimer) { clearTimeout(recognitionTimer); recognitionTimer = null; }
+    }
+
+    function startRealtimeRecognition() {
+        stopRealtimeRecognition();
+        const tick = async () => {
+            if (activeSession) {
+                await recognizeCurrentFrame(false);
+                recognitionTimer = setTimeout(tick, 2000);
+            }
+        };
+        recognitionTimer = setTimeout(tick, 600);
+    }
+
+    // -- Camera init --
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+            audio: false
+        });
+        video.srcObject = stream;
+        video.addEventListener('loadedmetadata', () => {
+            videoReady = true;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            faceStatusBadge.textContent = 'Camera Ready';
+        });
+        setStatus('Camera ready chhe. Class ane Subject select kari Session Start karo.');
+        startFaceDetectLoop();
+    } catch (err) {
+        setStatus('Camera access malyo nathi: ' + err.message, 'danger');
+        faceStatusBadge.textContent = '⚠ Camera Error';
+    }
+
+    // -- Manual scan button --
+    captureBtn.addEventListener('click', () => recognizeCurrentFrame(true));
+
+    // -- Start session --
+    document.getElementById('start_session').addEventListener('click', async () => {
+        const classId = document.getElementById('class_select').value;
+        const subjectId = document.getElementById('subject_select').value;
+        if (!classId || !subjectId) {
+            setStatus('⚠ Pehla class ane subject select karo.', 'danger'); return;
+        }
+        setStatus('Session start thai rahyu chhe...');
+        try {
+            const res = await csrfFetch('/professor/session/start', {
+                method: 'POST',
+                body: JSON.stringify({ method: 'face', class_id: classId, subject_id: subjectId }),
+            });
+            const json = await res.json();
+            if (json.session_id) {
+                activeSession = json.session_id;
+                markedCount = 0; statPresent = 0; statLate = 0; statDup = 0;
+                updateMarkedCount();
+                markedStudents.innerHTML = '<tr id="empty_row"><td colspan="5" class="text-center text-muted py-3">Live AI scanning chalu chhe...</td></tr>';
+                setStatus('Session #' + activeSession + ' started — AI realtime scanning chalu.', 'success');
+                scanIndicator.style.display = 'flex';
+                document.getElementById('stop_session').disabled = false;
+                document.getElementById('start_session').disabled = true;
+                document.getElementById('class_select').disabled = true;
+                document.getElementById('subject_select').disabled = true;
+                captureBtn.disabled = false;
+                startTimer();
+                startRealtimeRecognition();
+            } else {
+                setStatus('⚠ ' + (json.error || 'Session start thai nathi.'), 'danger');
+            }
+        } catch (err) { setStatus('Start fail thai: ' + err.message, 'danger'); }
+    });
+
+    // -- Stop session --
+    document.getElementById('stop_session').addEventListener('click', async () => {
+        if (!activeSession) return;
+        setStatus('Session stop thai rahyu chhe...');
+        try {
+            const res = await csrfFetch('/professor/session/stop', {
+                method: 'POST',
+                body: JSON.stringify({ session_id: activeSession }),
+            });
+            const json = await res.json();
+            if (json.stopped) {
+                setStatus('✓ Session #' + activeSession + ' stopped. Total marked: ' + markedCount, 'success');
+                document.getElementById('stop_session').disabled = true;
+                document.getElementById('start_session').disabled = false;
+                document.getElementById('class_select').disabled = false;
+                document.getElementById('subject_select').disabled = false;
+                captureBtn.disabled = true;
+                scanIndicator.style.display = 'none';
+                stopRealtimeRecognition();
+                stopTimer();
+                setConfidence(null);
+                drawFaceBox(false);
+                activeSession = null;
+            } else {
+                setStatus('⚠ ' + (json.error || 'Session stop thai nathi.'), 'danger');
+            }
+        } catch (err) { setStatus('Stop fail thai: ' + err.message, 'danger'); }
+    });
+})();
+</script>
+{% endblock %}

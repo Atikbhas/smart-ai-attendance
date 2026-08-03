@@ -1,0 +1,58 @@
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Toggle sidebar">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="sidebar-brand">
+            <div class="brand-mark">AI</div>
+            <div>
+                <p class="brand-label">AI Attendance</p>
+                <p class="brand-subtitle">Enterprise Control</p>
+            </div>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        {% if current_user.role_name == 'admin' %}
+            <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+            <a href="{{ url_for('admin.students') }}" class="sidebar-link {% if request.endpoint == 'admin.students' %}active{% endif %}"><i class="bi bi-people-fill"></i><span>Students</span></a>
+            <a href="{{ url_for('admin.professors') }}" class="sidebar-link {% if request.endpoint == 'admin.professors' %}active{% endif %}"><i class="bi bi-person-badge"></i><span>Professors</span></a>
+            <a href="{{ url_for('admin.departments') }}" class="sidebar-link {% if request.endpoint == 'admin.departments' %}active{% endif %}"><i class="bi bi-buildings"></i><span>Departments</span></a>
+            <a href="{{ url_for('admin.courses') }}" class="sidebar-link {% if request.endpoint == 'admin.courses' %}active{% endif %}"><i class="bi bi-book-fill"></i><span>Courses</span></a>
+            <a href="{{ url_for('admin.subjects') }}" class="sidebar-link {% if request.endpoint == 'admin.subjects' %}active{% endif %}"><i class="bi bi-journal-bookmark-fill"></i><span>Subjects</span></a>
+            <a href="{{ url_for('admin.classes') }}" class="sidebar-link {% if request.endpoint == 'admin.classes' %}active{% endif %}"><i class="bi bi-calendar-event-fill"></i><span>Classes</span></a>
+            <a href="{{ url_for('admin.master_attendance') }}" class="sidebar-link {% if request.endpoint == 'admin.master_attendance' %}active{% endif %}"><i class="bi bi-clipboard-check-fill"></i><span>Attendance</span></a>
+            <a href="{{ url_for('admin.leave_requests') }}" class="sidebar-link {% if request.endpoint == 'admin.leave_requests' %}active{% endif %}"><i class="bi bi-calendar-check-fill"></i><span>Leave Management</span></a>
+            <a href="{{ url_for('admin.face_recognition') }}" class="sidebar-link {% if request.endpoint == 'admin.face_recognition' %}active{% endif %}"><i class="bi bi-person-lines-fill"></i><span>Face Recognition</span></a>
+            <a href="{{ url_for('timetable.view') }}" class="sidebar-link {% if 'timetable' in request.endpoint %}active{% endif %}"><i class="bi bi-calendar3"></i><span>Timetable</span></a>
+        {% elif current_user.role_name == 'professor' %}
+            <a href="{{ url_for('professor.dashboard') }}" class="sidebar-link {% if request.endpoint == 'professor.dashboard' %}active{% endif %}"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+            <a href="{{ url_for('timetable.view') }}" class="sidebar-link {% if 'timetable' in request.endpoint %}active{% endif %}"><i class="bi bi-calendar3"></i><span>Timetable</span></a>
+            <a href="{{ url_for('professor.list_sessions') }}" class="sidebar-link {% if request.endpoint == 'professor.list_sessions' %}active{% endif %}"><i class="bi bi-calendar3-event"></i><span>Sessions</span></a>
+            <a href="{{ url_for('professor.analytics_index') }}" class="sidebar-link {% if request.endpoint == 'professor.analytics_index' %}active{% endif %}"><i class="bi bi-graph-up"></i><span>Analytics</span></a>
+            <a href="{{ url_for('professor.face_attendance') }}" class="sidebar-link {% if request.endpoint == 'professor.face_attendance' %}active{% endif %}"><i class="bi bi-camera-reels"></i><span>Face Attendance</span></a>
+            <a href="{{ url_for('professor.qr_attendance') }}" class="sidebar-link {% if request.endpoint == 'professor.qr_attendance' %}active{% endif %}"><i class="bi bi-qr-code-scan"></i><span>QR Attendance</span></a>
+            <a href="{{ url_for('professor.leave_requests') }}" class="sidebar-link {% if request.endpoint == 'professor.leave_requests' %}active{% endif %}"><i class="bi bi-calendar-check"></i><span>Leave Requests</span></a>
+        {% elif current_user.role_name == 'student' %}
+            <a href="{{ url_for('student.dashboard') }}" class="sidebar-link {% if request.endpoint == 'student.dashboard' %}active{% endif %}"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+            <a href="{{ url_for('timetable.view') }}" class="sidebar-link {% if 'timetable' in request.endpoint %}active{% endif %}"><i class="bi bi-calendar3"></i><span>Timetable</span></a>
+            <a href="{{ url_for('student.face_profile') }}" class="sidebar-link {% if request.endpoint == 'student.face_profile' %}active{% endif %}"><i class="bi bi-person-circle"></i><span>Face Profile</span></a>
+            <a href="{{ url_for('student.leave_requests') }}" class="sidebar-link {% if request.endpoint == 'student.leave_requests' %}active{% endif %}"><i class="bi bi-calendar-check"></i><span>Leave Requests</span></a>
+        {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+        <a href="{% if current_user.role_name == 'admin' %}{{ url_for('admin.profile') }}{% elif current_user.role_name == 'student' %}{{ url_for('student.profile') }}{% else %}{{ url_for('timetable.view') }}{% endif %}" class="profile-chip text-decoration-none text-light" style="cursor: pointer;">
+            {% if current_user.student_profile and current_user.student_profile.profile_photo %}
+            <img src="{{ url_for('static', filename=current_user.student_profile.profile_photo) }}" class="rounded-circle object-fit-cover shadow-sm border border-warning" style="width: 36px; height: 36px;" alt="Profile Photo">
+            {% else %}
+            <span class="avatar bg-warning text-dark fw-bold">{{ current_user.first_name[0] }}</span>
+            {% endif %}
+            <div>
+                <p class="mb-0 fw-bold">{{ current_user.full_name }}</p>
+                <small class="text-secondary">{{ current_user.role_name|title }}</small>
+            </div>
+        </a>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary w-100">Logout</a>
+    </div>
+</aside>

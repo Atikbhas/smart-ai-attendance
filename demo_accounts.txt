@@ -1,0 +1,23 @@
+Demo Accounts
+==============
+Admin: admin@example.com / Admin@12345
+Professor1: professor1@example.com / Professor@1123
+Student1: student1@example.com / Student@1123
+Professor2: professor2@example.com / Professor@2123
+Student2: student2@example.com / Student@2123
+Professor3: professor3@example.com / Professor@3123
+Student3: student3@example.com / Student@3123
+Professor4: professor4@example.com / Professor@4123
+Student4: student4@example.com / Student@4123
+Professor5: professor5@example.com / Professor@5123
+Student5: student5@example.com / Student@5123
+Professor6: professor6@example.com / Professor@6123
+Student6: student6@example.com / Student@6123
+Professor7: professor7@example.com / Professor@7123
+Student7: student7@example.com / Student@7123
+Professor8: professor8@example.com / Professor@8123
+Student8: student8@example.com / Student@8123
+Professor9: professor9@example.com / Professor@9123
+Student9: student9@example.com / Student@9123
+Professor10: professor10@example.com / Professor@10123
+Student10: student10@example.com / Student@10123

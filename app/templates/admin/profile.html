@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Profile | AI Attendance System{% endblock %}
+{% block page_title %}Admin Profile{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 admin-profile-page">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <p class="eyebrow mb-1">Administrator account</p>
+            <h2 class="h3 fw-bold mb-1">{{ profile_stats.name }}</h2>
+            <p class="text-muted mb-0">Manage your account details and access level.</p>
+        </div>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-warning fw-semibold px-4">
+            <i class="bi bi-speedometer2 me-1"></i>Back to Dashboard
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-lg p-4 h-100">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="avatar bg-warning text-dark fw-bold" style="width: 4rem; height: 4rem; font-size: 1.4rem;">{{ current_user.first_name[0] }}</div>
+                    <div>
+                        <h4 class="mb-0 text-light">{{ profile_stats.name }}</h4>
+                        <p class="text-secondary mb-0">{{ profile_stats.role }}</p>
+                    </div>
+                </div>
+                <div class="p-3 rounded-3 bg-dark border border-secondary mb-3">
+                    <small class="text-secondary d-block mb-1">Email</small>
+                    <div class="fw-bold text-light">{{ profile_stats.email }}</div>
+                </div>
+                <div class="p-3 rounded-3 bg-dark border border-secondary mb-3">
+                    <small class="text-secondary d-block mb-1">Role</small>
+                    <div class="fw-bold text-warning">{{ profile_stats.role }}</div>
+                </div>
+                <div class="p-3 rounded-3 bg-dark border border-secondary">
+                    <small class="text-secondary d-block mb-1">Last Login</small>
+                    <div class="fw-bold text-light">{{ profile_stats.last_login.strftime('%d %b %Y, %I:%M %p') if profile_stats.last_login else 'Not available' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h4 class="mb-1 text-warning">Admin Access</h4>
+                        <p class="text-secondary mb-0">This account has full administrative access to the system.</p>
+                    </div>
+                    <span class="badge bg-warning text-dark">Admin</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-dark border border-secondary h-100">
+                            <small class="text-secondary d-block mb-1">Dashboard Access</small>
+                            <div class="fw-bold text-light">Departments, courses, subjects, classes, and attendance</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-dark border border-secondary h-100">
+                            <small class="text-secondary d-block mb-1">Management Scope</small>
+                            <div class="fw-bold text-light">Students, professors, leaves, timetable, and face recognition</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

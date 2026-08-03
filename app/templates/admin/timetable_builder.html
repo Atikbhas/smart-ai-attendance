@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}Timetable Builder & Auto-Scheduler | Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Header -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <h2 class="h3 fw-bold mb-1"><i class="bi bi-gear-wide-connected me-2 text-warning"></i>Timetable Builder & AI Auto-Scheduler</h2>
+            <p class="text-secondary small mb-0">Manage master slots, assign substitute professors, or 1-Click generate conflict-free timetables.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-warning px-3 fw-bold" onclick="openOverrideModal()"><i class="bi bi-person-exclamation me-1"></i>Set Substitute / Holiday</button>
+            <button class="btn btn-success px-3 fw-bold" onclick="autoGenerateTimetable()"><i class="bi bi-magic me-1"></i>1-Click AI Auto-Generate</button>
+            <a href="{{ url_for('timetable.view') }}" class="btn btn-outline-light px-3"><i class="bi bi-eye me-1"></i>View Mode</a>
+        </div>
+    </div>
+
+    <!-- Class Selector -->
+    <div class="card p-3 mb-4 shadow-sm border-0">
+        <form method="GET" action="{{ url_for('timetable.admin_builder') }}" class="row g-3 align-items-center">
+            <div class="col-md-8">
+                <label class="form-label text-secondary small fw-semibold"><i class="bi bi-building me-1"></i>Select Class to Edit</label>
+                <select name="class_id" class="form-select bg-dark text-light border-secondary" onchange="this.form.submit()">
+                    {% for c in classes %}
+                    <option value="{{ c.id }}" {% if selected_class_id == c.id %}selected{% endif %}>{{ c.name }} (Sem {{ c.semester }}{% if c.section %}-{{ c.section }}{% endif %})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 text-end">
+                <span class="badge bg-warning text-dark fs-6 px-3 py-2 mt-4"><i class="bi bi-info-circle me-1"></i>Editing: {{ selected_class.name if selected_class else 'Class' }}</span>
+            </div>
+        </form>
+    </div>
+
+    <!-- Master Timetable Grid -->
+    <div class="card p-0 border-0 shadow-lg overflow-hidden mb-4">
+        <div class="table-responsive">
+            <table class="table table-dark table-bordered align-middle text-center mb-0" style="min-width: 900px;">
+                <thead>
+                    <tr style="background: rgba(255, 102, 0, 0.15); border-bottom: 2px solid #FF6600;">
+                        <th style="width: 140px;" class="py-3 text-warning fw-bold">TIME / DAY</th>
+                        {% for day in days %}
+                        <th class="py-3 text-light">{{ day }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for slot in time_slots %}
+                    <tr {% if slot.is_recess %}style="background: rgba(255, 193, 7, 0.08);"{% endif %}>
+                        <td class="fw-bold py-3 text-start ps-3 bg-dark-subtle">
+                            <div class="badge bg-outline-warning mb-1" style="color: #FF6600; border: 1px solid #FF6600;">{{ slot.slot_name }}</div>
+                            <div class="small text-secondary font-monospace">{{ slot.start_time }} - {{ slot.end_time }}</div>
+                        </td>
+
+                        {% if slot.is_recess %}
+                        <td colspan="6" class="py-3 text-warning fw-bold bg-warning-subtle text-uppercase">
+                            <i class="bi bi-cup-straw me-2"></i>RECESS / BREAK
+                        </td>
+                        {% else %}
+
+                        {% for day in days %}
+                        {% set key = (day, slot.id) %}
+                        {% set entry = grid.get(key, None) %}
+                        <td class="p-2" style="min-height: 90px; vertical-align: top;">
+                            <div class="p-2 rounded text-start shadow-sm border border-secondary"
+                                 style="background: {% if entry and entry.is_lab %}rgba(13, 202, 240, 0.15);{% elif entry %}rgba(255, 102, 0, 0.15);{% else %}rgba(255, 255, 255, 0.03);{% endif %}">
+                                
+                                {% if entry and entry.subject %}
+                                <div class="fw-bold text-light small">{{ entry.subject.name }}</div>
+                                <div class="small text-secondary"><i class="bi bi-person me-1"></i>{{ entry.professor.user.full_name if entry.professor and entry.professor.user else 'Faculty' }}</div>
+                                <div class="small text-secondary"><i class="bi bi-geo-alt me-1"></i>{{ entry.room_number or 'Room 101' }}</div>
+                                <div class="d-flex gap-1 mt-2">
+                                    <button class="btn btn-sm btn-outline-warning w-50 py-0" style="font-size: 0.75rem;" onclick="openEditModal('{{ day }}', {{ slot.id }}, {{ entry.subject_id or 0 }}, {{ entry.professor_id or 0 }}, '{{ entry.room_number or '' }}', {{ 'true' if entry.is_lab else 'false' }})">Edit</button>
+                                    <button class="btn btn-sm btn-outline-danger w-50 py-0" style="font-size: 0.75rem;" onclick="deleteSlot('{{ day }}', {{ slot.id }})">Clear</button>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-2">
+                                    <button class="btn btn-sm btn-outline-secondary py-1 px-2" style="font-size: 0.8rem;" onclick="openEditModal('{{ day }}', {{ slot.id }}, 0, 0, '', false)">
+                                        <i class="bi bi-plus-circle me-1"></i>Assign Slot
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% endfor %}
+
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Master Slot Edit Modal -->
+<div class="modal fade" id="slotModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold" id="modalTitle"><i class="bi bi-pencil-square me-2 text-warning"></i>Assign Timetable Slot</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modalDay">
+                <input type="hidden" id="modalSlotId">
+                <div class="mb-3">
+                    <label class="form-label text-secondary small">Subject</label>
+                    <select id="modalSubject" class="form-select bg-dark text-light border-secondary">
+                        <option value="">-- Select Subject --</option>
+                        {% for s in subjects %}
+                        <option value="{{ s.id }}">{{ s.name }} ({{ s.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-secondary small">Faculty / Professor</label>
+                    <select id="modalProf" class="form-select bg-dark text-light border-secondary">
+                        <option value="">-- Select Professor --</option>
+                        {% for p in professors %}
+                        <option value="{{ p.id }}">{{ p.user.full_name }} ({{ p.employee_code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-secondary small">Room Number</label>
+                    <input type="text" id="modalRoom" class="form-control bg-dark text-light border-secondary" placeholder="e.g. Room 101, Lab 1">
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="modalIsLab">
+                    <label class="form-check-label text-light" for="modalIsLab">Practical LAB Session</label>
+                </div>
+                <div id="modalError" class="alert alert-danger d-none py-2 small"></div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning fw-bold px-4" onclick="saveSlot()">Save Slot</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Override / Substitute Modal -->
+<div class="modal fade" id="overrideModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-warning"><i class="bi bi-person-exclamation me-2"></i>Set Substitute Faculty / Holiday</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-secondary small">Target Date</label>
+                    <input type="date" id="ovDate" class="form-control bg-dark text-light border-secondary">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-secondary small">Time Slot</label>
+                    <select id="ovSlot" class="form-select bg-dark text-light border-secondary" onchange="loadFreeProfessors()">
+                        {% for ts in time_slots %}
+                        {% if not ts.is_recess %}
+                        <option value="{{ ts.id }}">{{ ts.slot_name }} ({{ ts.start_time }}-{{ ts.end_time }})</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-secondary small">Action Status</label>
+                    <select id="ovStatus" class="form-select bg-dark text-light border-secondary" onchange="toggleSubProfGroup()">
+                        <option value="substitute">Assign Substitute Professor</option>
+                        <option value="cancelled">Cancel Lecture (Faculty Absent)</option>
+                        <option value="holiday">Declare Holiday (No Class)</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="subProfGroup">
+                    <label class="form-label text-warning small fw-bold"><i class="bi bi-person-check me-1"></i>Available Free Professors (Auto-Detected)</label>
+                    <select id="ovSubProf" class="form-select bg-dark text-light border-warning">
+                        <!-- Populated dynamically via JS -->
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-secondary small">Reason / Notice Note</label>
+                    <input type="text" id="ovNote" class="form-control bg-dark text-light border-secondary" placeholder="e.g. Prof. MD on medical leave">
+                </div>
+                <div id="ovError" class="alert alert-danger d-none py-2 small"></div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning fw-bold px-4" onclick="saveOverride()">Apply Override</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let bsModal = null;
+let bsOvModal = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    bsModal = new bootstrap.Modal(document.getElementById('slotModal'));
+    bsOvModal = new bootstrap.Modal(document.getElementById('overrideModal'));
+    document.getElementById('ovDate').value = new Date().toISOString().split('T')[0];
+});
+
+function openEditModal(day, slotId, subjId, profId, room, isLab) {
+    document.getElementById('modalDay').value = day;
+    document.getElementById('modalSlotId').value = slotId;
+    document.getElementById('modalSubject').value = subjId || '';
+    document.getElementById('modalProf').value = profId || '';
+    document.getElementById('modalRoom').value = room || '';
+    document.getElementById('modalIsLab').checked = isLab;
+    document.getElementById('modalError').classList.add('d-none');
+    document.getElementById('modalTitle').innerText = `Assign Slot: ${day} (Slot #${slotId})`;
+    bsModal.show();
+}
+
+function openOverrideModal() {
+    loadFreeProfessors();
+    document.getElementById('ovError').classList.add('d-none');
+    bsOvModal.show();
+}
+
+function toggleSubProfGroup() {
+    const status = document.getElementById('ovStatus').value;
+    const group = document.getElementById('subProfGroup');
+    group.style.display = (status === 'substitute') ? 'block' : 'none';
+}
+
+async function loadFreeProfessors() {
+    const dateVal = document.getElementById('ovDate').value;
+    const slotId = document.getElementById('ovSlot').value;
+    const dateObj = new Date(dateVal);
+    const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const dayName = days[dateObj.getDay()];
+
+    const res = await fetch(`{{ url_for('timetable.free_professors') }}?day_of_week=${dayName}&time_slot_id=${slotId}`);
+    if (res.ok) {
+        const data = await res.json();
+        const select = document.getElementById('ovSubProf');
+        select.innerHTML = '';
+        if (data.free_professors && data.free_professors.length > 0) {
+            data.free_professors.forEach(p => {
+                select.innerHTML += `<option value="${p.id}">${p.name} (${p.code})</option>`;
+            });
+        } else {
+            select.innerHTML = `<option value="">No free professors available</option>`;
+        }
+    }
+}
+
+async function saveSlot() {
+    const classId = {{ selected_class_id or 0 }};
+    const day = document.getElementById('modalDay').value;
+    const slotId = document.getElementById('modalSlotId').value;
+    const subjId = document.getElementById('modalSubject').value;
+    const profId = document.getElementById('modalProf').value;
+    const room = document.getElementById('modalRoom').value;
+    const isLab = document.getElementById('modalIsLab').checked;
+
+    const res = await fetch("{{ url_for('timetable.save_entry') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            class_id: classId,
+            day_of_week: day,
+            time_slot_id: slotId,
+            subject_id: subjId,
+            professor_id: profId,
+            room_number: room,
+            is_lab: isLab
+        })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+        window.location.reload();
+    } else {
+        const errDiv = document.getElementById('modalError');
+        errDiv.innerText = data.error || 'Failed to save slot';
+        errDiv.classList.remove('d-none');
+    }
+}
+
+async function saveOverride() {
+    const classId = {{ selected_class_id or 0 }};
+    const dateVal = document.getElementById('ovDate').value;
+    const slotId = document.getElementById('ovSlot').value;
+    const status = document.getElementById('ovStatus').value;
+    const subProfId = document.getElementById('ovSubProf').value;
+    const note = document.getElementById('ovNote').value;
+
+    const res = await fetch("{{ url_for('timetable.save_override') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            class_id: classId,
+            override_date: dateVal,
+            time_slot_id: slotId,
+            status: status,
+            substitute_professor_id: subProfId,
+            note: note
+        })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+        alert('Override applied & Notifications sent to students!');
+        window.location.reload();
+    } else {
+        const errDiv = document.getElementById('ovError');
+        errDiv.innerText = data.error || 'Failed to apply override';
+        errDiv.classList.remove('d-none');
+    }
+}
+
+async function deleteSlot(day, slotId) {
+    if (!confirm(`Clear slot for ${day}?`)) return;
+    const classId = {{ selected_class_id or 0 }};
+    const res = await fetch("{{ url_for('timetable.delete_entry') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ class_id: classId, day_of_week: day, time_slot_id: slotId })
+    });
+    if (res.ok) window.location.reload();
+}
+
+async function autoGenerateTimetable() {
+    const classId = {{ selected_class_id or 0 }};
+    if (!confirm('Auto-generate conflict-free timetable for this class? Existing slots will be replaced.')) return;
+    const res = await fetch("{{ url_for('timetable.auto_generate') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ class_id: classId })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+        alert(`Successfully generated ${data.generated_entries} slots!`);
+        window.location.reload();
+    } else {
+        alert(data.error || 'Auto-generation failed');
+    }
+}
+</script>
+{% endblock %}

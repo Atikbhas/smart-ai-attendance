@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Leave Requests & Activity Timeline | AI Attendance System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <!-- Top Header -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <h2 class="h3 fw-bold mb-1"><i class="bi bi-calendar-check me-2 text-warning"></i>Leave Requests & Activity Timeline</h2>
+            <p class="text-secondary small mb-0">Apply for leave, track application decision statuses, and inspect recent attendance activity.</p>
+        </div>
+        <div>
+            <a href="{{ url_for('student.profile') }}" class="btn btn-outline-warning fw-bold px-3">
+                <i class="bi bi-person-badge me-1"></i>My Profile
+            </a>
+            <a href="{{ url_for('student.dashboard') }}" class="btn btn-secondary px-3 ms-2">Dashboard</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        
+        <!-- Left Column: Submit New Leave Form -->
+        <div class="col-lg-5">
+            <div class="card p-4 bg-dark text-light border border-secondary shadow-lg rounded-3">
+                <div class="mb-3 border-bottom border-secondary pb-3">
+                    <h5 class="fw-bold mb-1 text-warning"><i class="bi bi-pencil-square me-2"></i>Apply for Leave</h5>
+                    <p class="small text-secondary mb-0">Submit leave dates and reason for faculty review.</p>
+                </div>
+                <form method="post" novalidate>
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold"><i class="bi bi-calendar-event me-1"></i>Start Date</label>
+                        {{ form.starts_on(class="form-control bg-dark text-light border-secondary") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold"><i class="bi bi-calendar-event-fill me-1"></i>End Date</label>
+                        {{ form.ends_on(class="form-control bg-dark text-light border-secondary") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold"><i class="bi bi-chat-left-text me-1"></i>Reason for Leave</label>
+                        {{ form.reason(class="form-control bg-dark text-light border-secondary", rows="4", placeholder="Specify reason (Medical, Family Function, Personal)...") }}
+                    </div>
+                    {{ form.submit(class="btn btn-warning w-100 fw-bold py-2") }}
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Leave Records & Attendance Activity Timeline -->
+        <div class="col-lg-7">
+            
+            <!-- Leave Requests History Card -->
+            <div class="card p-4 bg-dark text-light border border-secondary shadow-sm rounded-3 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0 text-warning"><i class="bi bi-clock-history me-2"></i>Leave Application History</h5>
+                    <span class="badge bg-outline-warning text-warning border border-warning fs-6 px-3 py-1">{{ leaves|length }} Requests</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-bordered align-middle text-center mb-0">
+                        <thead style="background: rgba(255, 102, 0, 0.15); border-bottom: 2px solid #FF6600;">
+                            <tr>
+                                <th>Dates</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Submitted</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for leave in leaves %}
+                        <tr>
+                            <td class="font-monospace text-warning small">{{ leave.starts_on }} to {{ leave.ends_on }}</td>
+                            <td class="text-start fw-semibold text-light">{{ leave.reason }}</td>
+                            <td>
+                                {% if leave.decision == 'approved' %}
+                                <span class="badge bg-success text-light px-3 py-1"><i class="bi bi-check-circle me-1"></i>APPROVED</span>
+                                {% elif leave.decision == 'rejected' %}
+                                <span class="badge bg-danger text-light px-3 py-1"><i class="bi bi-x-circle me-1"></i>REJECTED</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark px-3 py-1"><i class="bi bi-hourglass-split me-1"></i>PENDING</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-secondary font-monospace">{{ leave.created_at.strftime('%b %d, %Y') if leave.created_at else '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-secondary py-4 opacity-75">No leave requests submitted yet.</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Attendance Activity Logs Timeline -->
+            <div class="card p-4 bg-dark text-light border border-secondary shadow-sm rounded-3">
+                <h5 class="fw-bold mb-3 text-info"><i class="bi bi-check2-square me-2"></i>Recent Attendance Activity Logs</h5>
+                <div>
+                    {% for att in recent_attendances %}
+                    <div class="d-flex align-items-center justify-content-between p-3 mb-2 rounded bg-dark border border-secondary">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge bg-success p-2 fs-6"><i class="bi bi-check-lg"></i></span>
+                            <div>
+                                <div class="fw-bold text-light">{{ att.session.subject.name if att.session and att.session.subject else 'Class Session' }}</div>
+                                <div class="small text-secondary font-monospace"><i class="bi bi-clock me-1"></i>{{ att.marked_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="badge bg-outline-info text-info border border-info px-3 py-1">
+                                <i class="bi bi-camera-fill me-1"></i>{{ att.method or 'QR / Face' }}
+                            </span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-secondary small py-3 opacity-75">No attendance activity recorded yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}Face Profile{% endblock %}
+{% block content %}
+<style>
+.camera-frame-reg {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 2px solid #FF6600;
+    background: #000;
+    min-height: 200px;
+}
+.camera-frame-reg video {
+    width: 100%;
+    display: block;
+    max-height: 320px;
+    object-fit: cover;
+}
+.capture-progress {
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+    overflow: hidden;
+}
+.capture-progress-bar {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #FF6600, #ffaa00);
+    transition: width 0.4s ease;
+}
+.img-thumb {
+    width: 56px; height: 56px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #FF6600;
+    animation: popIn 0.3s ease;
+}
+@keyframes popIn { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
+.reg-status {
+    font-size: 0.88rem;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(255,102,0,0.07);
+    border: 1px solid rgba(255,102,0,0.2);
+    min-height: 38px;
+}
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <p class="eyebrow">Face recognition</p>
+        <h1>Face profile</h1>
+    </div>
+    <a class="btn btn-secondary" href="{{ url_for('student.dashboard') }}">Back to dashboard</a>
+</div>
+
+<div class="row g-3">
+    <!-- LEFT: Camera + Upload -->
+    <div class="col-lg-5">
+        <!-- Live Capture Card -->
+        <div class="card mb-3">
+            <p class="eyebrow">Live Capture</p>
+            <h3 class="mb-3">Register Your Face</h3>
+
+            <div class="camera-frame-reg mb-3">
+                <video id="reg_video" autoplay playsinline muted></video>
+                <canvas id="reg_canvas" style="display:none;"></canvas>
+            </div>
+
+            <!-- Status -->
+            <div class="reg-status mb-3" id="reg_status">
+                <span class="text-muted">📷 Camera loading... Pehla camera allow karo.</span>
+            </div>
+
+            <!-- Captured thumbs -->
+            <div id="thumb_row" class="d-flex flex-wrap gap-2 mb-3" style="min-height:60px;"></div>
+
+            <!-- Progress bar -->
+            <div class="mb-2">
+                <div class="d-flex justify-content-between mb-1">
+                    <small class="text-muted">Progress</small>
+                    <small class="fw-bold text-orange"><span id="captured_count">0</span> / 3 images</small>
+                </div>
+                <div class="capture-progress">
+                    <div class="capture-progress-bar" id="prog_bar" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="d-flex gap-2">
+                <button id="capture_pose" class="btn btn-primary flex-fill" disabled>
+                    <i class="bi bi-camera-fill"></i> Capture Pose
+                </button>
+                <button id="finalize_registration" class="btn btn-success flex-fill" disabled>
+                    <i class="bi bi-check-circle-fill"></i> Finalize
+                </button>
+            </div>
+            <small class="text-muted d-block mt-2">Minimum 3 photos capture karo, pacchi Finalize karo.</small>
+        </div>
+
+        <!-- File Upload Card -->
+        <div class="card">
+            <p class="eyebrow">Upload</p>
+            <h3 class="mb-3">Training image</h3>
+            <form method="post" enctype="multipart/form-data" novalidate>
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.face_image.label(class="form-label") }}
+                    {{ form.face_image(class="form-control", accept=".jpg,.jpeg,.png") }}
+                    <div class="form-text">Clear front-facing photo, only your face visible.</div>
+                </div>
+                {{ form.submit(class="btn btn-primary w-100") }}
+            </form>
+        </div>
+    </div>
+
+    <!-- RIGHT: Status table -->
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <p class="eyebrow">Status</p>
+            <h3 class="mb-3">Training progress</h3>
+
+            {% if encodings %}
+            <div class="d-flex gap-3 mb-3">
+                <div class="text-center">
+                    <div class="fw-bold fs-3 text-orange">{{ encodings|length }}</div>
+                    <div class="text-muted small">Encodings</div>
+                </div>
+                <div class="align-self-center">
+                    <span class="badge text-bg-success py-2 px-3">✓ Face Trained</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>#</th><th>Image</th><th>Encoding</th><th>Status</th></tr></thead>
+                    <tbody>
+                    {% for encoding in encodings %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td class="text-truncate" style="max-width:140px;" title="{{ encoding.image_path }}">{{ encoding.image_path | basename if encoding.image_path else '—' }}</td>
+                        <td class="text-truncate" style="max-width:140px;" title="{{ encoding.encoding_path }}">{{ encoding.encoding_path | basename if encoding.encoding_path else '—' }}</td>
+                        <td><span class="badge text-bg-success">{{ encoding.status.value }}</span></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="text-center text-body-secondary py-4">No face encodings trained yet.<br><small>Upar camera thi 3+ photos capture karo.</small></td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(async function(){
+    const video     = document.getElementById('reg_video');
+    const canvas    = document.getElementById('reg_canvas');
+    const captureBtn  = document.getElementById('capture_pose');
+    const finalizeBtn = document.getElementById('finalize_registration');
+    const countSpan   = document.getElementById('captured_count');
+    const progBar     = document.getElementById('prog_bar');
+    const statusEl    = document.getElementById('reg_status');
+    const thumbRow    = document.getElementById('thumb_row');
+
+    const MIN_IMAGES = 3;
+    let captureCount = 0;
+    let capturing = false;
+
+    function setStatus(msg, type='info') {
+        const icons = { info:'ℹ️', success:'✅', danger:'❌', warning:'⚠️' };
+        statusEl.innerHTML = `<span>${icons[type]||'ℹ️'} ${msg}</span>`;
+        statusEl.style.borderColor = type==='success' ? '#28a745' : type==='danger' ? '#dc3545' : 'rgba(255,102,0,0.2)';
+    }
+
+    function updateProgress() {
+        countSpan.textContent = captureCount;
+        const pct = Math.min(100, (captureCount / MIN_IMAGES) * 100);
+        progBar.style.width = pct + '%';
+        finalizeBtn.disabled = captureCount < MIN_IMAGES;
+        if (captureCount >= MIN_IMAGES) {
+            setStatus(`${captureCount} images captured! Haju Finalize dabavo.`, 'success');
+        } else {
+            setStatus(`${captureCount} / ${MIN_IMAGES} images. Haju ${MIN_IMAGES - captureCount} capture karo.`, 'info');
+        }
+    }
+
+    function addThumb(dataUrl) {
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.className = 'img-thumb';
+        img.title = `Photo ${captureCount}`;
+        thumbRow.appendChild(img);
+    }
+
+    // Camera init
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+            audio: false
+        });
+        video.srcObject = stream;
+        video.addEventListener('loadedmetadata', () => {
+            canvas.width  = video.videoWidth  || 640;
+            canvas.height = video.videoHeight || 480;
+            captureBtn.disabled = false;
+            setStatus('Camera ready! Saamna joi Capture Pose dabavo.', 'success');
+        });
+    } catch(err) {
+        setStatus('Camera access malyo nathi: ' + err.message + ' — File upload use karo.', 'danger');
+        captureBtn.disabled = true;
+    }
+
+    // Capture button
+    captureBtn.addEventListener('click', async () => {
+        if (capturing) return;
+        capturing = true;
+        captureBtn.disabled = true;
+        setStatus('Capturing...', 'info');
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+        try {
+            const res  = await csrfFetch('/student/face/capture', {
+                method: 'POST',
+                body: JSON.stringify({ image: dataUrl }),
+            });
+            const json = await res.json();
+            if (res.ok && json.saved) {
+                captureCount = json.count || (captureCount + 1);
+                addThumb(dataUrl);
+                updateProgress();
+            } else {
+                setStatus(json.error || 'Capture failed. Try again.', 'danger');
+            }
+        } catch(err) {
+            setStatus('Request fail: ' + err.message, 'danger');
+        } finally {
+            capturing = false;
+            captureBtn.disabled = false;
+        }
+    });
+
+    // Finalize button
+    finalizeBtn.addEventListener('click', async () => {
+        if (captureCount < MIN_IMAGES) {
+            setStatus(`Pehla ${MIN_IMAGES} images capture karo! (current: ${captureCount})`, 'warning');
+            return;
+        }
+        if (!confirm(`${captureCount} images thi face training finalize karo?`)) return;
+
+        finalizeBtn.disabled = true;
+        captureBtn.disabled = true;
+        setStatus('Training chal rahi chhe... Thodi var rahejo.', 'info');
+
+        try {
+            const res  = await csrfFetch('/student/face/finalize', { method: 'POST' });
+            const json = await res.json();
+            if (res.ok && json.trained) {
+                setStatus(`✓ Training complete! ${json.trained_count} encodings created.`, 'success');
+                setTimeout(() => window.location.reload(), 1200);
+            } else if (json.reason === 'not_enough_images') {
+                setStatus(`Not enough images. ${json.count} chhe, ${MIN_IMAGES} joie. Vadhu capture karo.`, 'warning');
+                finalizeBtn.disabled = false;
+            } else {
+                setStatus('Training fail: ' + (json.error || JSON.stringify(json)), 'danger');
+                finalizeBtn.disabled = captureCount < MIN_IMAGES;
+            }
+        } catch(err) {
+            setStatus('Finalize request fail: ' + err.message, 'danger');
+            finalizeBtn.disabled = false;
+        } finally {
+            captureBtn.disabled = false;
+        }
+    });
+
+    updateProgress();
+})();
+</script>
+{% endblock %}
+

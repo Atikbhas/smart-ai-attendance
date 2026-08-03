@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Student portal</p>
+        <h1>Student Dashboard</h1>
+        <p class="auth-card__text">Manage your face recognition profile, leave requests, and digital identity.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-outline-warning" href="{{ url_for('student.profile') }}"><i class="bi bi-person-badge me-1"></i>My Profile</a>
+        <a class="btn btn-primary" href="{{ url_for('student.face_profile') }}">Upload face</a>
+        <a class="btn btn-secondary" href="{{ url_for('student.leave_requests') }}">Apply leave</a>
+    </div>
+</div>
+
+<!-- Student Identity Panel -->
+<div class="panel p-4 mb-4" style="background: var(--gradient-dark-card); border: 1px solid var(--border-medium);">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="brand-mark bg-orange text-dark fs-3 p-3 rounded-4 fw-bold">ID</div>
+            <div>
+                <p class="eyebrow mb-1">Official Student Identity</p>
+                <h3 class="mb-1 text-white">Digital Student ID Card</h3>
+                <p class="text-muted small mb-0">Show your Digital ID Card QR Code to your Professor for instant attendance marking.</p>
+            </div>
+        </div>
+        <a href="{{ url_for('student.profile') }}" class="btn btn-orange btn-lg px-4"><i class="bi bi-person-badge"></i> View Digital Profile & ID Card</a>
+    </div>
+</div>
+
+{% if show_onboarding_modal %}
+<!-- Mandatory First-Time Onboarding Modal -->
+<div class="modal fade show d-block" id="firstTimeOnboardingModal" tabindex="-1" style="background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark text-light border border-warning shadow-lg rounded-3" style="border-width: 2px !important;">
+            <div class="modal-header border-warning" style="background: linear-gradient(90deg, #FF6600 0%, #e65c00 100%); color: #000;">
+                <h5 class="modal-title fw-bolder"><i class="bi bi-stars me-2"></i>WELCOME! ONE-TIME STUDENT PROFILE SETUP</h5>
+            </div>
+            <form method="POST" action="{{ url_for('student.profile') }}">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="alert alert-warning text-dark fw-bold mb-4">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>First-time setup: Please complete your personal & guardian information. This will only be asked ONCE.
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label text-secondary small fw-semibold">First Name</label>
+                            <input type="text" name="first_name" class="form-control bg-dark text-light border-secondary" value="{{ current_user.first_name }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small fw-semibold">Last Name</label>
+                            <input type="text" name="last_name" class="form-control bg-dark text-light border-secondary" value="{{ current_user.last_name }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small fw-semibold">Student Phone Number</label>
+                            <input type="text" name="phone_number" class="form-control bg-dark text-light border-secondary" placeholder="+91 9876543210" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small fw-semibold">Blood Group</label>
+                            <select name="blood_group" class="form-select bg-dark text-light border-secondary" required>
+                                <option value="B+">B+</option>
+                                <option value="A+">A+</option>
+                                <option value="O+">O+</option>
+                                <option value="AB+">AB+</option>
+                                <option value="A-">A-</option>
+                                <option value="B-">B-</option>
+                                <option value="O-">O-</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small fw-semibold">Guardian / Parent Name</label>
+                            <input type="text" name="guardian_name" class="form-control bg-dark text-light border-secondary" placeholder="Parent Name" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-secondary small fw-semibold">Guardian Contact Phone</label>
+                            <input type="text" name="guardian_phone" class="form-control bg-dark text-light border-secondary" placeholder="+91 9876543210" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-secondary small fw-semibold">Emergency Contact Number</label>
+                            <input type="text" name="emergency_contact" class="form-control bg-dark text-light border-secondary" placeholder="+91 9876543210" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-secondary small fw-semibold">Residential Address</label>
+                            <textarea name="address" rows="2" class="form-control bg-dark text-light border-secondary" placeholder="Residential Address..." required></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="submit" class="btn btn-warning w-100 fw-bolder py-2 fs-6">
+                        <i class="bi bi-check-circle-fill me-2"></i>Submit Profile & Finish Onboarding
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

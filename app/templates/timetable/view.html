@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Class Timetable | AI Attendance System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Header & View Switcher -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <h2 class="h3 fw-bold mb-1"><i class="bi bi-calendar3 me-2 text-warning"></i>Class Timetable Schedule</h2>
+            <p class="text-secondary small mb-0">View official college timetable, live sessions, substitute faculty, and holiday notices.</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            {% if current_user.role_name == 'professor' %}
+            <div class="btn-group p-1 bg-dark border border-secondary rounded-pill" role="group">
+                <a href="{{ url_for('timetable.view', mode='my', class_id=selected_class_id, prof_id=selected_prof_id, date=target_date_str) }}" class="btn btn-sm rounded-pill {% if view_mode == 'my' %}btn-warning fw-bold{% else %}btn-outline-secondary text-light{% endif %} px-3">
+                    <i class="bi bi-person-fill me-1"></i>My Schedule
+                </a>
+                <a href="{{ url_for('timetable.view', mode='all', class_id=selected_class_id, prof_id=selected_prof_id, date=target_date_str) }}" class="btn btn-sm rounded-pill {% if view_mode == 'all' %}btn-warning fw-bold{% else %}btn-outline-secondary text-light{% endif %} px-3">
+                    <i class="bi bi-building me-1"></i>Full College Schedule
+                </a>
+            </div>
+            {% endif %}
+            {% if current_user.role_name == 'admin' %}
+            <a href="{{ url_for('timetable.admin_builder') }}" class="btn btn-warning px-3"><i class="bi bi-gear-fill me-1"></i>Timetable Builder & Substitutes</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Week Navigation & Filter Form -->
+    <div class="card p-3 mb-4 shadow-sm border-0">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-3 border-bottom border-secondary">
+            <div class="d-flex align-items-center gap-2">
+                <a href="{{ url_for('timetable.view', date=prev_week_date_str, mode=view_mode, class_id=selected_class_id, prof_id=selected_prof_id) }}" class="btn btn-outline-warning btn-sm fw-bold">
+                    <i class="bi bi-chevron-left me-1"></i>Previous Week
+                </a>
+                <span class="badge bg-warning-subtle text-warning border border-warning fs-6 px-3 py-2">
+                    <i class="bi bi-calendar-range me-2"></i>Week: {{ week_range_str }}
+                </span>
+                <a href="{{ url_for('timetable.view', date=next_week_date_str, mode=view_mode, class_id=selected_class_id, prof_id=selected_prof_id) }}" class="btn btn-outline-warning btn-sm fw-bold">
+                    Next Week<i class="bi bi-chevron-right ms-1"></i>
+                </a>
+            </div>
+            <div>
+                <a href="{{ url_for('timetable.view', mode=view_mode, class_id=selected_class_id, prof_id=selected_prof_id) }}" class="btn btn-sm btn-outline-light"><i class="bi bi-geo-alt-fill me-1"></i>Jump to Today</a>
+            </div>
+        </div>
+
+        <form method="GET" action="{{ url_for('timetable.view') }}" class="row g-3 align-items-center">
+            <input type="hidden" name="mode" value="{{ view_mode }}">
+            <div class="col-md-4">
+                <label class="form-label text-secondary small fw-semibold"><i class="bi bi-building me-1"></i>Select Class / Batch</label>
+                <select name="class_id" class="form-select bg-dark text-light border-secondary" onchange="this.form.submit()">
+                    <option value="">-- All Classes --</option>
+                    {% for c in classes %}
+                    <option value="{{ c.id }}" {% if selected_class_id == c.id %}selected{% endif %}>{{ c.name }} (Sem {{ c.semester }}{% if c.section %}-{{ c.section }}{% endif %})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-secondary small fw-semibold"><i class="bi bi-person-badge me-1"></i>Select Professor Filter</label>
+                <select name="prof_id" class="form-select bg-dark text-light border-secondary" onchange="this.form.submit()">
+                    <option value="">-- All Professors (Class View) --</option>
+                    {% for p in professors %}
+                    <option value="{{ p.id }}" {% if selected_prof_id == p.id %}selected{% endif %}>{{ p.user.full_name }} ({{ p.employee_code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-secondary small fw-semibold"><i class="bi bi-calendar-event me-1"></i>Jump to Specific Date</label>
+                <input type="date" name="date" value="{{ target_date_str }}" class="form-control bg-dark text-light border-secondary" onchange="this.form.submit()">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <a href="{{ url_for('timetable.view', mode=view_mode) }}" class="btn btn-outline-secondary w-100"><i class="bi bi-arrow-counterclockwise"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Timetable Grid -->
+    <div class="card p-0 border-0 shadow-lg overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-dark table-bordered align-middle text-center mb-0" style="min-width: 950px;">
+                <thead class="table-group-divider">
+                    <tr style="background: rgba(255, 102, 0, 0.15); border-bottom: 2px solid #FF6600;">
+                        <th style="width: 140px;" class="py-3 text-warning fw-bold"><i class="bi bi-clock me-1"></i>TIME / DAY</th>
+                        {% for day_info in week_days_data %}
+                        <th class="py-3 {% if day_info.is_today %}bg-warning text-dark fw-bolder{% else %}text-light{% endif %}">
+                            <div>
+                                <span class="fs-6 fw-bold">{{ day_info.code }}</span>
+                                <span class="badge {% if day_info.is_today %}bg-dark text-light{% else %}bg-outline-secondary text-warning border border-secondary{% endif %} ms-1" style="font-size: 0.75rem;">{{ day_info.date_str }}</span>
+                            </div>
+                            {% if day_info.is_today %}<div class="badge bg-dark mt-1" style="font-size: 0.65rem;">TODAY</div>{% endif %}
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for slot in time_slots %}
+                    <tr {% if slot.is_recess %}style="background: rgba(255, 193, 7, 0.08);"{% endif %}>
+                        <!-- Slot Column -->
+                        <td class="fw-bold py-3 text-start ps-3 align-middle bg-dark-subtle">
+                            <div class="badge bg-outline-warning mb-1" style="color: #FF6600; border: 1px solid #FF6600;">{{ slot.slot_name }}</div>
+                            {% if slot.is_recess %}
+                            <div class="small text-warning font-monospace"><i class="bi bi-cup-hot me-1"></i>RECESS</div>
+                            {% else %}
+                            <div class="small text-secondary font-monospace">{{ slot.start_time }} - {{ slot.end_time }}</div>
+                            {% endif %}
+                        </td>
+
+                        {% if slot.is_recess %}
+                        <td colspan="6" class="py-3 text-warning fw-bold bg-warning-subtle text-uppercase letter-spacing-1">
+                            <i class="bi bi-cup-straw me-2 fs-5"></i>Break / Recess Interval ({{ slot.slot_name }})
+                        </td>
+                        {% else %}
+
+                        {% for day_info in week_days_data %}
+                        {% set key = (day_info.code, slot.id) %}
+                        {% set entries_list = grid.get(key, []) %}
+                        {% set ov_key = (day_info.iso_date, slot.id, selected_class_id) %}
+                        {% set active_override = overrides_grid.get(ov_key, None) if overrides_grid else None %}
+
+                        <td class="p-2 {% if day_info.is_today and slot.id == current_slot_id %}table-warning border-warning{% endif %}" style="min-height: 90px; vertical-align: top;">
+                            {% if day_info.is_today and slot.id == current_slot_id %}
+                            <div class="badge bg-danger text-light mb-2 animate-pulse"><i class="bi bi-record-circle me-1"></i>LIVE NOW</div>
+                            {% endif %}
+
+                            <!-- Override Notices (Holiday / Cancellation / Substitute) -->
+                            {% if active_override %}
+                                {% if active_override.status == 'cancelled' %}
+                                <div class="badge bg-danger text-light p-2 mb-2 w-100 text-wrap"><i class="bi bi-x-circle me-1"></i>CANCELLED: {{ active_override.note or 'Faculty Absent' }}</div>
+                                {% elif active_override.status == 'holiday' %}
+                                <div class="badge bg-secondary text-light p-2 mb-2 w-100 text-wrap"><i class="bi bi-umbrella me-1"></i>HOLIDAY: {{ active_override.note or 'Class Off' }}</div>
+                                {% elif active_override.status == 'substitute' %}
+                                <div class="badge bg-warning text-dark p-2 mb-2 w-100 text-wrap"><i class="bi bi-arrow-repeat me-1"></i>SUBSTITUTE: {{ active_override.substitute_professor.user.full_name if active_override.substitute_professor and active_override.substitute_professor.user else 'Guest Faculty' }}</div>
+                                {% endif %}
+                            {% endif %}
+
+                            {% if entries_list and (not active_override or active_override.status not in ['cancelled', 'holiday']) %}
+                            {% for entry in entries_list %}
+                            {% set is_my_lecture = (my_prof_id and entry.professor_id == my_prof_id) %}
+                            <div class="p-2 rounded mb-2 text-start position-relative shadow-sm"
+                                 style="{% if is_my_lecture %}background: rgba(255, 102, 0, 0.25); border: 2px solid #FF6600; box-shadow: 0 0 10px rgba(255, 102, 0, 0.4);{% elif entry.is_lab %}background: rgba(13, 202, 240, 0.15); border-left: 4px solid #0dcaf0;{% else %}background: rgba(255, 255, 255, 0.05); border-left: 4px solid #6c757d;{% endif %}">
+                                
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <span class="fw-bold text-light" style="font-size: 0.95rem;">
+                                        {% if entry.is_lab %}<i class="bi bi-laptop me-1 text-info"></i>{% else %}<i class="bi bi-book me-1 text-warning"></i>{% endif %}
+                                        {{ entry.subject.name if entry.subject else 'Subject' }}
+                                    </span>
+                                    <div>
+                                        {% if is_my_lecture %}
+                                        <span class="badge bg-warning text-dark fw-bold me-1"><i class="bi bi-star-fill me-1"></i>YOUR CLASS</span>
+                                        {% endif %}
+                                        {% if entry.is_lab %}
+                                        <span class="badge bg-info text-dark">LAB</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="small mt-1 {% if is_my_lecture %}text-warning fw-bold{% else %}text-secondary{% endif %}">
+                                    <i class="bi bi-person me-1"></i>
+                                    {% if active_override and active_override.status == 'substitute' and active_override.substitute_professor and active_override.substitute_professor.user %}
+                                    <span><i class="bi bi-arrow-repeat me-1"></i>{{ active_override.substitute_professor.user.full_name }} (Sub)</span>
+                                    {% else %}
+                                    {{ entry.professor.user.full_name if entry.professor and entry.professor.user else 'Faculty N/A' }}
+                                    {% endif %}
+                                </div>
+                                <div class="small text-secondary">
+                                    <i class="bi bi-geo-alt me-1"></i>{{ entry.room_number or 'Classroom' }} ({{ entry.classroom.name if entry.classroom else '' }})
+                                </div>
+
+                                {% if (current_user.role_name == 'admin' or is_my_lecture) and day_info.is_today and slot.id == current_slot_id %}
+                                <div class="mt-2">
+                                    <a href="{{ url_for('professor.qr_attendance') }}" class="btn btn-sm btn-warning w-100 py-1 fw-bold"><i class="bi bi-camera me-1"></i>Start Attendance</a>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <div class="text-muted small py-3 opacity-50">- Free / Off Slot -</div>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
