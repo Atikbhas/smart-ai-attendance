@@ -188,9 +188,10 @@ def create_app(config_name: str | None = None) -> Flask:
 
         if host_header.endswith(":5000") or host_header.endswith(":5001"):
             return None
-
+        
+        print(f"DEBUG host_header={host_header!r} RENDER_env={os.environ.get('RENDER')!r}", flush=True)
         abort(403)
-
+        
         @app.route('/healthz')
         def health_check():
             return 'OK', 200
