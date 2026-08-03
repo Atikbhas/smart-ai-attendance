@@ -190,8 +190,9 @@ def create_app(config_name: str | None = None) -> Flask:
             return None
 
         abort(403)
+
         @app.route('/healthz')
         def health_check():
-          return 'OK', 200
-    
-        return app
+            return 'OK', 200
+
+    return app
