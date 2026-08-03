@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from flask import Flask, abort, request, requestenforce_localhost_access
+from flask import Flask, abort, request
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
 from flask_migrate import Migrate
