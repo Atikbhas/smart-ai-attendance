@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from flask import Flask, abort, request
+from flask import Flask, abort, request, requestenforce_localhost_access
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -162,6 +162,11 @@ def create_app(config_name: str | None = None) -> Flask:
 
     @app.before_request
     def enforce_localhost_access():
+        # Skip the localhost-only check entirely when running on Render (or any host
+        # that sets RENDER env var) — this restriction is for local dev safety only.
+        if os.environ.get("RENDER"):
+            return None
+
         host_header = (request.headers.get("Host", request.host) or request.host).strip().lower()
         port = os.environ.get("PORT", "5000")
         allowed_hosts = {
@@ -185,5 +190,4 @@ def create_app(config_name: str | None = None) -> Flask:
             return None
 
         abort(403)
-
     return app
