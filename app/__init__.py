@@ -195,5 +195,6 @@ def create_app(config_name: str | None = None) -> Flask:
         @app.route('/healthz')
         def health_check():
             return 'OK', 200
-
-    return app
+        
+        print("ROUTES:", app.url_map, flush=True)
+        return app
